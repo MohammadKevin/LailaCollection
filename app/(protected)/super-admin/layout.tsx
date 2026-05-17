@@ -138,7 +138,7 @@ export default function SuperAdminLayout({
           </nav>
         </div>
 
-        <Link href="/login">
+        <Link href="/Login">
           <button
             className={`w-full rounded-2xl py-4 flex items-center ${
               collapsed ? "justify-center" : "justify-center gap-3"

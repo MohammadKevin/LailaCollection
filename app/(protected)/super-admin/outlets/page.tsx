@@ -85,6 +85,7 @@ export default function OutletsPage() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchOutlets();
     }, []);
 
@@ -397,11 +398,6 @@ export default function OutletsPage() {
                                                 </span>
                                             </div>
                                         </div>
-
-                                        <button className="w-full bg-slate-900 hover:bg-slate-800 transition-all text-white px-4 py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 group-hover:bg-pink-600 shadow-sm">
-                                            Buka Dashboard Cabang
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
                                     </div>
                                 </div>
                             ))}

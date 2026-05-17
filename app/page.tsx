@@ -96,18 +96,6 @@ export default function LailaPinkLandingPage() {
             Diciptakan khusus untuk ekosistem
             Laila Collection.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <Link href="/login">
-              <button className="bg-pink-600 hover:bg-pink-700 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-pink-200 transition-all hover:-translate-y-1">
-                Mulai Sekarang
-              </button>
-            </Link>
-
-            <button className="bg-white border border-pink-100 text-pink-600 px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-pink-50 transition-all">
-              Pelajari Sistem
-            </button>
-          </div>
         </div>
       </section>
 
