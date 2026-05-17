@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 
+import Link from "next/link";
+
 import {
   Mail,
   Lock,
@@ -57,16 +59,19 @@ export default function LailaPinkLogin() {
 
       if (!response.ok) {
         setError(
-          data.message ||
-            "Login gagal",
+          Array.isArray(data.message)
+            ? data.message.join(", ")
+            : data.message ||
+                "Login gagal",
         );
 
         return;
       }
 
+      // FIX TOKEN
       localStorage.setItem(
         "token",
-        data.access_token,
+        data.accessToken,
       );
 
       localStorage.setItem(
@@ -74,7 +79,7 @@ export default function LailaPinkLogin() {
         JSON.stringify(data.user),
       );
 
-      document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `token=${data.accessToken}; path=/; max-age=86400; SameSite=Lax`;
 
       document.cookie = `user=${encodeURIComponent(
         JSON.stringify(data.user),
@@ -92,7 +97,9 @@ export default function LailaPinkLogin() {
           "/admin",
         );
       }
-    } catch {
+    } catch (error) {
+      console.log(error);
+
       setError(
         "Terjadi kesalahan sistem",
       );
@@ -196,13 +203,14 @@ export default function LailaPinkLogin() {
                   className="w-full bg-white border border-pink-100 py-4 pl-14 pr-6 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-300 transition-all text-sm font-medium placeholder:text-pink-200"
                 />
               </div>
-              <div className="forgot">
-                <a
-                  href="https://drive.google.com/file/d/1BdIPxnrCDJ4qe1AR2PncmVelNPR6MrKY/view?usp=sharing"
-                  className="text-xs text-pink-600 hover:text-pink-800 transition-all"
+
+              <div className="flex justify-end px-2">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-pink-600 hover:text-pink-800 transition-all"
                 >
                   Lupa Password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -232,7 +240,6 @@ export default function LailaPinkLogin() {
               )}
             </button>
           </form>
-
         </div>
       </div>
 
