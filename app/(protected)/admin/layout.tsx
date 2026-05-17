@@ -33,8 +33,8 @@ const menus = [
   },
 
   {
-    label: "Sales",
-    href: "/admin/sales",
+    label: "Cashier",
+    href: "/admin/cashier",
     icon: ShoppingCart,
   },
 

@@ -7,7 +7,7 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://laila-collections-production.up.railway.app/api";
 
-export const api = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   timeout: 60000,
 });
@@ -33,90 +33,30 @@ api.interceptors.response.use(
   (response) => response,
 
   (error: AxiosError<any>) => {
-    if (typeof window !== "undefined") {
-      const status = error.response?.status;
+    const status = error.response?.status;
 
-      const data = error.response?.data;
+    const data = error.response?.data;
 
-      let message = "Terjadi kesalahan";
+    console.error("API ERROR:", {
+      status,
+      data,
+      url: error.config?.url,
+      method: error.config?.method,
+    });
 
-      if (data) {
-        if (typeof data.message === "string") {
-          message = data.message;
-        } else if (Array.isArray(data.message)) {
-          message = data.message.join(", ");
-        } else if ((data as any).error) {
-          message = (data as any).error;
-        }
-      } else if (error.message) {
-        message = error.message;
-      }
+    if (
+      typeof window !== "undefined" &&
+      status === 401
+    ) {
+      localStorage.removeItem("access_token");
 
-      console.error("API ERROR:", {
-        status,
-        message,
-        data,
-        url: error.config?.url,
-        method: error.config?.method,
-      });
+      localStorage.removeItem("token");
 
-      if (status === 401) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("token");
-
-        alert("Token telah kadaluarsa, silakan login ulang");
-
-        window.location.href = "/login";
-      }
+      window.location.href = "/login";
     }
 
     return Promise.reject(error);
   }
 );
-
-export const uploadFile = async (
-  url: string,
-  file: File,
-  extraData?: Record<string, any>
-) => {
-  const formData = new FormData();
-
-  formData.append("file", file);
-
-  if (extraData) {
-    Object.keys(extraData).forEach((key) => {
-      formData.append(key, extraData[key]);
-    });
-  }
-
-  return api.post(url, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-};
-
-export const downloadFile = async (
-  url: string,
-  filename = "file"
-) => {
-  const res = await api.get(url, {
-    responseType: "blob",
-  });
-
-  const blob = new Blob([res.data]);
-
-  const link = document.createElement("a");
-
-  link.href = window.URL.createObjectURL(blob);
-
-  link.download = filename;
-
-  document.body.appendChild(link);
-
-  link.click();
-
-  link.remove();
-};
 
 export default api;
