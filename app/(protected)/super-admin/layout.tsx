@@ -48,12 +48,12 @@ const menus = [
     href: "/super-admin/products",
   },
   {
-    label: "Expenses",
+    label: "Operasional",
     icon: Wallet,
     href: "/super-admin/expenses",
   },
   {
-    label: "Reports",
+    label: "Laporan",
     icon: FileText,
     href: "/super-admin/reports",
   },
@@ -66,24 +66,19 @@ export default function SuperAdminLayout({
 }) {
   const pathname = usePathname();
 
-  const [collapsed, setCollapsed] =
-    useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#FFF5F7] flex text-[#4A1D24]">
       <aside
         className={`fixed left-0 top-0 h-screen bg-white border-r border-pink-100 z-50 transition-all duration-300 flex flex-col justify-between ${
-          collapsed
-            ? "w-24 p-4"
-            : "w-72 p-6"
+          collapsed ? "w-24 p-4" : "w-72 p-6"
         }`}
       >
         <div>
           <div
             className={`flex items-center ${
-              collapsed
-                ? "justify-center"
-                : "justify-between"
+              collapsed ? "justify-center" : "justify-between"
             } mb-10`}
           >
             {!collapsed && (
@@ -107,9 +102,7 @@ export default function SuperAdminLayout({
             )}
 
             <button
-              onClick={() =>
-                setCollapsed(!collapsed)
-              }
+              onClick={() => setCollapsed(!collapsed)}
               className="w-11 h-11 rounded-2xl bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-all text-pink-500"
             >
               {collapsed ? (
@@ -122,19 +115,13 @@ export default function SuperAdminLayout({
 
           <nav className="space-y-2">
             {menus.map((item) => {
-              const isActive =
-                pathname === item.href;
+              const isActive = pathname === item.href;
 
               return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                >
+                <Link key={item.label} href={item.href}>
                   <button
                     className={`w-full flex items-center ${
-                      collapsed
-                        ? "justify-center"
-                        : "justify-start"
+                      collapsed ? "justify-center" : "justify-start"
                     } gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all ${
                       isActive
                         ? "bg-pink-600 text-white shadow-lg shadow-pink-200"
@@ -143,9 +130,7 @@ export default function SuperAdminLayout({
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
 
-                    {!collapsed && (
-                      <span>{item.label}</span>
-                    )}
+                    {!collapsed && <span>{item.label}</span>}
                   </button>
                 </Link>
               );
@@ -156,25 +141,19 @@ export default function SuperAdminLayout({
         <Link href="/login">
           <button
             className={`w-full rounded-2xl py-4 flex items-center ${
-              collapsed
-                ? "justify-center"
-                : "justify-center gap-3"
+              collapsed ? "justify-center" : "justify-center gap-3"
             } font-bold transition-all bg-pink-50 hover:bg-pink-100 text-pink-600`}
           >
             <LogOut className="w-5 h-5" />
 
-            {!collapsed && (
-              <span>Logout</span>
-            )}
+            {!collapsed && <span>Logout</span>}
           </button>
         </Link>
       </aside>
 
       <main
         className={`flex-1 transition-all duration-300 ${
-          collapsed
-            ? "ml-24"
-            : "ml-72"
+          collapsed ? "ml-24" : "ml-72"
         }`}
       >
         {children}

@@ -14,21 +14,15 @@ import {
 } from "lucide-react";
 
 export default function LailaPinkLogin() {
-  const [email, setEmail] =
-    useState("");
+  const [email, setEmail] = useState("");
 
-  const [password, setPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const handleLogin = async (
-    e: React.FormEvent,
-  ) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
@@ -36,48 +30,38 @@ export default function LailaPinkLogin() {
 
       setError("");
 
-      const response =
-        await fetch(
-          "https://laila-collections-production.up.railway.app/api/auth/login",
-          {
-            method: "POST",
+      const response = await fetch(
+        "https://laila-collections-production.up.railway.app/api/auth/login",
+        {
+          method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              email,
-              password,
-            }),
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
 
-      const data =
-        await response.json();
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        },
+      );
+
+      const data = await response.json();
 
       if (!response.ok) {
         setError(
           Array.isArray(data.message)
             ? data.message.join(", ")
-            : data.message ||
-                "Login gagal",
+            : data.message || "Login gagal",
         );
 
         return;
       }
 
       // FIX TOKEN
-      localStorage.setItem(
-        "token",
-        data.accessToken,
-      );
+      localStorage.setItem("token", data.accessToken);
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user),
-      );
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       document.cookie = `token=${data.accessToken}; path=/; max-age=86400; SameSite=Lax`;
 
@@ -85,24 +69,15 @@ export default function LailaPinkLogin() {
         JSON.stringify(data.user),
       )}; path=/; max-age=86400; SameSite=Lax`;
 
-      if (
-        data.user.role ===
-        "SUPER_ADMIN"
-      ) {
-        window.location.replace(
-          "/super-admin",
-        );
+      if (data.user.role === "SUPER_ADMIN") {
+        window.location.replace("/super-admin");
       } else {
-        window.location.replace(
-          "/admin",
-        );
+        window.location.replace("/admin");
       }
     } catch (error) {
       console.log(error);
 
-      setError(
-        "Terjadi kesalahan sistem",
-      );
+      setError("Terjadi kesalahan sistem");
     } finally {
       setLoading(false);
     }
@@ -115,14 +90,12 @@ export default function LailaPinkLogin() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-rose-200/30 rounded-full blur-[100px] -z-0" />
 
       <div className="absolute top-8 left-8 z-20">
-        <button
-          onClick={() =>
-            window.history.back()
-          }
+        <Link
+          href="/"
           className="bg-white/80 backdrop-blur-xl border border-pink-100 hover:bg-pink-50 text-pink-600 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-pink-100 transition-all hover:-translate-y-1 active:scale-95"
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Link>
       </div>
 
       <div className="w-full max-w-[450px] relative z-10 animate-in fade-in zoom-in duration-700">
@@ -143,16 +116,12 @@ export default function LailaPinkLogin() {
           </h1>
 
           <p className="text-pink-900/40 text-sm font-medium mt-2 tracking-wide">
-            Silahkan masuk ke sistem butik
-            Anda
+            Silahkan masuk ke sistem butik Anda
           </p>
         </div>
 
         <div className="bg-white/70 backdrop-blur-2xl border border-white rounded-[3.5rem] p-10 shadow-[0_20px_50px_rgba(244,114,182,0.1)]">
-          <form
-            onSubmit={handleLogin}
-            className="space-y-6"
-          >
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-900/40 ml-4">
                 Email Address
@@ -167,11 +136,7 @@ export default function LailaPinkLogin() {
                   type="email"
                   placeholder="jhondoe@gmail.com"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full bg-white border border-pink-100 py-4 pl-14 pr-6 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-300 transition-all text-sm font-medium placeholder:text-pink-200"
                 />
@@ -194,11 +159,7 @@ export default function LailaPinkLogin() {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full bg-white border border-pink-100 py-4 pl-14 pr-6 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-300 transition-all text-sm font-medium placeholder:text-pink-200"
                 />
@@ -228,13 +189,11 @@ export default function LailaPinkLogin() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-
                   Loading...
                 </>
               ) : (
                 <>
                   Masuk Sekarang
-
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                 </>
               )}
