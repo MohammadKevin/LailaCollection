@@ -10,6 +10,10 @@ const BASE_URL =
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 60000,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 api.interceptors.request.use(
@@ -32,45 +36,33 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
 
-  (error: AxiosError<any>) => {
+  async (error: AxiosError<any>) => {
+    console.error("========== API ERROR ==========");
+    console.error("MESSAGE:", error.message);
+    console.error("STATUS:", error.response?.status);
+    console.error("DATA:", error.response?.data);
+    console.error("URL:", error.config?.url);
+    console.error("METHOD:", error.config?.method);
+    console.error("FULL ERROR:", error);
+    console.error("================================");
+
     const status = error.response?.status;
 
-    const data = error.response?.data;
+    if (typeof window !== "undefined") {
+      if (status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("token");
 
-    console.error(
-  "API ERROR FULL:",
-  error,
-);
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+      }
 
-console.error(
-  "API RESPONSE:",
-  error.response,
-);
-
-console.error(
-  "API DATA:",
-  error.response?.data,
-);
-
-console.error(
-  "API STATUS:",
-  error.response?.status,
-);
-
-console.error(
-  "API URL:",
-  error.config?.url,
-);
-
-    if (
-      typeof window !== "undefined" &&
-      status === 401
-    ) {
-      localStorage.removeItem("access_token");
-
-      localStorage.removeItem("token");
-
-      window.location.href = "/login";
+      if (!error.response) {
+        console.error(
+          "Backend tidak merespon / CORS / Network Error"
+        );
+      }
     }
 
     return Promise.reject(error);
