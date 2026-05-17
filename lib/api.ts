@@ -37,12 +37,30 @@ api.interceptors.response.use(
 
     const data = error.response?.data;
 
-    console.error("API ERROR:", {
-      status,
-      data,
-      url: error.config?.url,
-      method: error.config?.method,
-    });
+    console.error(
+  "API ERROR FULL:",
+  error,
+);
+
+console.error(
+  "API RESPONSE:",
+  error.response,
+);
+
+console.error(
+  "API DATA:",
+  error.response?.data,
+);
+
+console.error(
+  "API STATUS:",
+  error.response?.status,
+);
+
+console.error(
+  "API URL:",
+  error.config?.url,
+);
 
     if (
       typeof window !== "undefined" &&

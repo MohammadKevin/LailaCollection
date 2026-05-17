@@ -18,6 +18,8 @@ import {
     Trash2,
     Wallet,
     X,
+    Building2,
+    ReceiptText,
 } from "lucide-react";
 
 import api from "@/lib/api";
@@ -89,8 +91,8 @@ export default function AdminExpensePage() {
                 setLoading(true);
 
                 const [
-                    expensesRes,
-                    outletsRes,
+                    expenseRes,
+                    outletRes,
                 ] = await Promise.all([
                     api.get(
                         "/expenses",
@@ -103,20 +105,20 @@ export default function AdminExpensePage() {
 
                 setExpenses(
                     Array.isArray(
-                        expensesRes.data,
+                        expenseRes.data,
                     )
-                        ? expensesRes.data
-                        : expensesRes
+                        ? expenseRes.data
+                        : expenseRes
                               .data
                               ?.data || [],
                 );
 
                 setOutlets(
                     Array.isArray(
-                        outletsRes.data,
+                        outletRes.data,
                     )
-                        ? outletsRes.data
-                        : outletsRes
+                        ? outletRes.data
+                        : outletRes
                               .data
                               ?.data || [],
                 );
@@ -124,9 +126,7 @@ export default function AdminExpensePage() {
                 error: any
             ) {
                 console.error(
-                    error
-                        ?.response
-                        ?.data || error,
+                    error,
                 );
 
                 alert(
@@ -157,10 +157,10 @@ export default function AdminExpensePage() {
         useMemo(() => {
             return expenses.reduce(
                 (
-                    acc,
+                    total,
                     expense,
                 ) =>
-                    acc +
+                    total +
                     expense.amount,
                 0,
             );
@@ -252,9 +252,7 @@ export default function AdminExpensePage() {
                 error: any
             ) {
                 console.error(
-                    error
-                        ?.response
-                        ?.data || error,
+                    error,
                 );
 
                 alert(
@@ -301,13 +299,13 @@ export default function AdminExpensePage() {
         async (
             id: string,
         ) => {
-            const confirmDelete =
+            const confirmed =
                 confirm(
                     "Hapus expense ini?",
                 );
 
             if (
-                !confirmDelete
+                !confirmed
             )
                 return;
 
@@ -316,18 +314,16 @@ export default function AdminExpensePage() {
                     `/expenses/${id}`,
                 );
 
+                fetchData();
+
                 alert(
                     "Expense berhasil dihapus",
                 );
-
-                fetchData();
             } catch (
-                error: any
+                error
             ) {
                 console.error(
-                    error
-                        ?.response
-                        ?.data || error,
+                    error,
                 );
 
                 alert(
@@ -337,97 +333,114 @@ export default function AdminExpensePage() {
         };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 p-4 md:p-8">
             <div className="max-w-7xl mx-auto space-y-6">
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-                    <div>
-                        <div className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-3 py-1.5 rounded-full text-xs font-bold mb-3">
-                            <Sparkles className="w-4 h-4" />
-                            Expense Management
+                <div className="relative overflow-hidden bg-white border border-slate-100 rounded-[32px] p-8 shadow-sm">
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-rose-100 to-red-50 rounded-full blur-3xl opacity-70" />
+
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        <div>
+                            <div className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-full text-xs font-bold mb-4">
+                                <Sparkles className="w-4 h-4" />
+                                Expense Management
+                            </div>
+
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
+                                Kelola Expense
+                                <span className="block text-red-600">
+                                    Lebih Modern
+                                </span>
+                            </h1>
+
+                            <p className="text-slate-500 mt-4 max-w-xl">
+                                Pantau seluruh
+                                pengeluaran outlet
+                                dengan tampilan
+                                modern, cepat,
+                                dan elegan.
+                            </p>
                         </div>
 
-                        <h1 className="text-3xl font-black text-slate-900">
-                            Admin Expense
-                        </h1>
-
-                        <p className="text-sm text-slate-400 mt-2">
-                            Kelola semua pengeluaran outlet
-                        </p>
+                        <button
+                            onClick={() =>
+                                setOpenModal(
+                                    true,
+                                )
+                            }
+                            className="bg-gradient-to-r from-red-500 to-rose-600 hover:scale-[1.02] active:scale-95 transition-all text-white px-7 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-red-200"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Tambah Expense
+                        </button>
                     </div>
-
-                    <button
-                        onClick={() =>
-                            setOpenModal(
-                                true,
-                            )
-                        }
-                        className="bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90 transition-all text-white px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Tambah Expense
-                    </button>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-5">
-                    <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                                Total Expense
-                            </p>
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                    Total Expense
+                                </p>
 
-                            <h2 className="text-4xl font-black text-slate-900 mt-2">
-                                {
-                                    expenses.length
-                                }
-                            </h2>
-                        </div>
+                                <h2 className="text-4xl font-black text-slate-900 mt-3">
+                                    {
+                                        expenses.length
+                                    }
+                                </h2>
+                            </div>
 
-                        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-                            <ClipboardList className="w-8 h-8" />
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                                Total Pengeluaran
-                            </p>
-
-                            <h2 className="text-2xl font-black text-red-600 mt-2">
-                                Rp{" "}
-                                {totalExpense.toLocaleString(
-                                    "id-ID",
-                                )}
-                            </h2>
-                        </div>
-
-                        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-                            <BadgeDollarSign className="w-8 h-8" />
+                            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+                                <ClipboardList className="w-8 h-8" />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                                Outlet
-                            </p>
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                    Total Pengeluaran
+                                </p>
 
-                            <h2 className="text-4xl font-black text-slate-900 mt-2">
-                                {
-                                    outlets.length
-                                }
-                            </h2>
+                                <h2 className="text-3xl font-black text-red-600 mt-3">
+                                    Rp{" "}
+                                    {totalExpense.toLocaleString(
+                                        "id-ID",
+                                    )}
+                                </h2>
+                            </div>
+
+                            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+                                <BadgeDollarSign className="w-8 h-8" />
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-                            <Wallet className="w-8 h-8" />
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                    Total Outlet
+                                </p>
+
+                                <h2 className="text-4xl font-black text-slate-900 mt-3">
+                                    {
+                                        outlets.length
+                                    }
+                                </h2>
+                            </div>
+
+                            <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+                                <Building2 className="w-8 h-8" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm">
+                <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
                     <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
 
                         <input
                             type="text"
@@ -444,7 +457,7 @@ export default function AdminExpensePage() {
                                         .value,
                                 )
                             }
-                            className="w-full bg-slate-50 rounded-2xl py-4 pl-11 pr-4 border border-slate-100 outline-none focus:ring-2 focus:ring-red-500/20"
+                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-red-500/20"
                         />
                     </div>
                 </div>
@@ -452,6 +465,21 @@ export default function AdminExpensePage() {
                 {loading ? (
                     <div className="bg-white rounded-3xl border border-slate-100 p-20 flex items-center justify-center">
                         <Loader2 className="w-10 h-10 animate-spin text-red-600" />
+                    </div>
+                ) : filteredExpenses
+                      .length === 0 ? (
+                    <div className="bg-white rounded-3xl border border-slate-100 p-20 text-center">
+                        <ReceiptText className="w-14 h-14 text-slate-300 mx-auto mb-4" />
+
+                        <h2 className="text-2xl font-black text-slate-900">
+                            Expense Tidak
+                            Ditemukan
+                        </h2>
+
+                        <p className="text-slate-400 mt-2">
+                            Belum ada data
+                            expense tersedia
+                        </p>
                     </div>
                 ) : (
                     <div className="grid xl:grid-cols-2 gap-6">
@@ -463,17 +491,17 @@ export default function AdminExpensePage() {
                                     key={
                                         expense.id
                                     }
-                                    className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm"
+                                    className="group bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all"
                                 >
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
-                                            <h2 className="text-xl font-black text-slate-900">
+                                            <h2 className="text-2xl font-black text-slate-900">
                                                 {
                                                     expense.title
                                                 }
                                             </h2>
 
-                                            <p className="text-sm text-slate-400 mt-2">
+                                            <p className="text-slate-400 mt-2 text-sm">
                                                 {expense.description ||
                                                     "Tidak ada deskripsi"}
                                             </p>
@@ -486,7 +514,7 @@ export default function AdminExpensePage() {
                                                         expense,
                                                     )
                                                 }
-                                                className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"
+                                                className="w-11 h-11 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-all"
                                             >
                                                 <Pencil className="w-4 h-4" />
                                             </button>
@@ -497,7 +525,7 @@ export default function AdminExpensePage() {
                                                         expense.id,
                                                     )
                                                 }
-                                                className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center"
+                                                className="w-11 h-11 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-all"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -505,12 +533,12 @@ export default function AdminExpensePage() {
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-4 mt-6">
-                                        <div className="bg-slate-50 rounded-2xl p-4">
-                                            <p className="text-xs uppercase font-bold tracking-wide text-slate-400">
+                                        <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-5">
+                                            <p className="text-xs uppercase font-bold tracking-wider text-red-400">
                                                 Amount
                                             </p>
 
-                                            <h3 className="text-2xl font-black text-red-600 mt-2">
+                                            <h3 className="text-3xl font-black text-red-600 mt-2">
                                                 Rp{" "}
                                                 {expense.amount.toLocaleString(
                                                     "id-ID",
@@ -518,12 +546,12 @@ export default function AdminExpensePage() {
                                             </h3>
                                         </div>
 
-                                        <div className="bg-slate-50 rounded-2xl p-4">
-                                            <p className="text-xs uppercase font-bold tracking-wide text-slate-400">
+                                        <div className="bg-slate-50 rounded-2xl p-5">
+                                            <p className="text-xs uppercase font-bold tracking-wider text-slate-400">
                                                 Tanggal
                                             </p>
 
-                                            <div className="flex items-center gap-2 mt-2 text-slate-700 font-bold">
+                                            <div className="flex items-center gap-2 mt-3 font-bold text-slate-700">
                                                 <CalendarDays className="w-4 h-4" />
 
                                                 {new Date(
@@ -532,6 +560,14 @@ export default function AdminExpensePage() {
                                                     "id-ID",
                                                 )}
                                             </div>
+
+                                            <p className="text-sm text-slate-500 mt-3">
+                                                Outlet:{" "}
+                                                {expense
+                                                    .outlet
+                                                    ?.name ||
+                                                    "-"}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -539,165 +575,168 @@ export default function AdminExpensePage() {
                         )}
                     </div>
                 )}
-            </div>
 
-            {openModal && (
-                <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="w-full max-w-xl bg-white rounded-3xl p-6 shadow-2xl">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-2xl font-black text-slate-900">
-                                    {editingId
-                                        ? "Edit Expense"
-                                        : "Tambah Expense"}
-                                </h2>
+                {openModal && (
+                    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="w-full max-w-2xl bg-white rounded-[32px] p-7 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex items-start justify-between mb-8">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900">
+                                        {editingId
+                                            ? "Edit Expense"
+                                            : "Tambah Expense"}
+                                    </h2>
 
-                                <p className="text-sm text-slate-400 mt-1">
-                                    Kelola data pengeluaran
-                                </p>
+                                    <p className="text-slate-400 mt-2">
+                                        Kelola data
+                                        pengeluaran
+                                        outlet
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={
+                                        resetForm
+                                    }
+                                    className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 transition-all flex items-center justify-center"
+                                >
+                                    <X className="w-5 h-5 text-slate-600" />
+                                </button>
                             </div>
 
-                            <button
-                                onClick={
-                                    resetForm
+                            <form
+                                onSubmit={
+                                    handleSubmit
                                 }
-                                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500"
+                                className="space-y-5"
                             >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <form
-                            onSubmit={
-                                handleSubmit
-                            }
-                            className="space-y-5"
-                        >
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">
-                                    Nama Expense
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="title"
-                                    value={
-                                        form.title
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                    className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 outline-none focus:ring-2 focus:ring-red-500/20"
-                                    placeholder="Masukkan nama expense"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">
-                                    Deskripsi
-                                </label>
-
-                                <textarea
-                                    name="description"
-                                    value={
-                                        form.description
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                    rows={4}
-                                    className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 outline-none focus:ring-2 focus:ring-red-500/20 resize-none"
-                                    placeholder="Deskripsi expense"
-                                />
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-5">
-                                <div className="space-y-2">
+                                <div>
                                     <label className="text-sm font-bold text-slate-700">
-                                        Amount
+                                        Nama Expense
                                     </label>
 
                                     <input
-                                        type="number"
-                                        name="amount"
+                                        type="text"
+                                        name="title"
                                         value={
-                                            form.amount
+                                            form.title
                                         }
                                         onChange={
                                             handleChange
                                         }
-                                        className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 outline-none focus:ring-2 focus:ring-red-500/20"
-                                        placeholder="Jumlah pengeluaran"
+                                        placeholder="Masukkan nama expense"
+                                        className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-red-500/20"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
+                                <div>
                                     <label className="text-sm font-bold text-slate-700">
-                                        Outlet
+                                        Deskripsi
                                     </label>
 
-                                    <select
-                                        name="outletId"
+                                    <textarea
+                                        name="description"
                                         value={
-                                            form.outletId
+                                            form.description
                                         }
                                         onChange={
                                             handleChange
                                         }
-                                        className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 outline-none focus:ring-2 focus:ring-red-500/20"
-                                    >
-                                        <option value="">
-                                            Pilih Outlet
-                                        </option>
-
-                                        {outlets.map(
-                                            (
-                                                outlet,
-                                            ) => (
-                                                <option
-                                                    key={
-                                                        outlet.id
-                                                    }
-                                                    value={
-                                                        outlet.id
-                                                    }
-                                                >
-                                                    {
-                                                        outlet.name
-                                                    }
-                                                </option>
-                                            ),
-                                        )}
-                                    </select>
+                                        rows={4}
+                                        placeholder="Masukkan deskripsi"
+                                        className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none resize-none focus:ring-2 focus:ring-red-500/20"
+                                    />
                                 </div>
-                            </div>
 
-                            <button
-                                type="submit"
-                                disabled={
-                                    submitting
-                                }
-                                className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90 disabled:opacity-50 transition-all text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
-                            >
-                                {submitting ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Processing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="w-5 h-5" />
+                                <div className="grid md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="text-sm font-bold text-slate-700">
+                                            Amount
+                                        </label>
 
-                                        {editingId
-                                            ? "Update Expense"
-                                            : "Tambah Expense"}
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                                        <input
+                                            type="number"
+                                            name="amount"
+                                            value={
+                                                form.amount
+                                            }
+                                            onChange={
+                                                handleChange
+                                            }
+                                            placeholder="Jumlah pengeluaran"
+                                            className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-red-500/20"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-bold text-slate-700">
+                                            Outlet
+                                        </label>
+
+                                        <select
+                                            name="outletId"
+                                            value={
+                                                form.outletId
+                                            }
+                                            onChange={
+                                                handleChange
+                                            }
+                                            className="w-full mt-2 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-red-500/20"
+                                        >
+                                            <option value="">
+                                                Pilih
+                                                Outlet
+                                            </option>
+
+                                            {outlets.map(
+                                                (
+                                                    outlet,
+                                                ) => (
+                                                    <option
+                                                        key={
+                                                            outlet.id
+                                                        }
+                                                        value={
+                                                            outlet.id
+                                                        }
+                                                    >
+                                                        {
+                                                            outlet.name
+                                                        }
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        submitting
+                                    }
+                                    className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90 disabled:opacity-50 transition-all text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 mt-4"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="w-5 h-5" />
+
+                                            {editingId
+                                                ? "Update Expense"
+                                                : "Tambah Expense"}
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

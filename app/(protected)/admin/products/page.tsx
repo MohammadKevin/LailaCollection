@@ -40,8 +40,14 @@ type ProductForm = {
     name: string;
     sellingPrice: string;
     stock: string;
-    imageUrl: string;
     categoryId: string;
+};
+
+const initialForm: ProductForm = {
+    name: "",
+    sellingPrice: "",
+    stock: "",
+    categoryId: "",
 };
 
 export default function AdminProductsPage() {
@@ -62,14 +68,18 @@ export default function AdminProductsPage() {
             null,
         );
 
+    const [selectedFile, setSelectedFile] =
+        useState<File | null>(
+            null,
+        );
+
+    const [previewImage, setPreviewImage] =
+        useState("");
+
     const [form, setForm] =
-        useState<ProductForm>({
-            name: "",
-            sellingPrice: "",
-            stock: "",
-            imageUrl: "",
-            categoryId: "",
-        });
+        useState<ProductForm>(
+            initialForm,
+        );
 
     const fetchProducts =
         async () => {
@@ -120,15 +130,13 @@ export default function AdminProductsPage() {
         }, [products, search]);
 
     const resetForm = () => {
-        setForm({
-            name: "",
-            sellingPrice: "",
-            stock: "",
-            imageUrl: "",
-            categoryId: "",
-        });
+        setForm(initialForm);
 
         setEditingId(null);
+
+        setSelectedFile(null);
+
+        setPreviewImage("");
     };
 
     const handleChange = (
@@ -139,6 +147,21 @@ export default function AdminProductsPage() {
             [e.target.name]:
                 e.target.value,
         });
+    };
+
+    const handleFileChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file =
+            e.target.files?.[0];
+
+        if (!file) return;
+
+        setSelectedFile(file);
+
+        setPreviewImage(
+            URL.createObjectURL(file),
+        );
     };
 
     const handleSubmit =
@@ -158,32 +181,54 @@ export default function AdminProductsPage() {
             try {
                 setSubmitting(true);
 
-                const payload = {
-                    name: form.name,
+                const formData =
+                    new FormData();
 
-                    sellingPrice:
-                        Number(
-                            form.sellingPrice,
-                        ),
+                formData.append(
+                    "name",
+                    form.name,
+                );
 
-                    stock: Number(
-                        form.stock,
-                    ),
+                formData.append(
+                    "sellingPrice",
+                    form.sellingPrice,
+                );
 
-                    imageUrl:
-                        form.imageUrl,
+                formData.append(
+                    "stock",
+                    form.stock,
+                );
 
-                    categoryId:
-                        form.categoryId ||
-                        null,
-                };
+                if (
+                    form.categoryId
+                ) {
+                    formData.append(
+                        "categoryId",
+                        form.categoryId,
+                    );
+                }
+
+                if (
+                    selectedFile
+                ) {
+                    formData.append(
+                        "image",
+                        selectedFile,
+                    );
+                }
 
                 if (
                     editingId
                 ) {
                     await api.patch(
                         `/products/${editingId}`,
-                        payload,
+                        formData,
+                        {
+                            headers: {
+                                "Content-Type":
+                                    "multipart/form-data",
+                            },
+                        },
                     );
 
                     alert(
@@ -192,7 +237,13 @@ export default function AdminProductsPage() {
                 } else {
                     await api.post(
                         "/products",
-                        payload,
+                        formData,
+                        {
+                            headers: {
+                                "Content-Type":
+                                    "multipart/form-data",
+                            },
+                        },
                     );
 
                     alert(
@@ -243,14 +294,15 @@ export default function AdminProductsPage() {
                 product.stock,
             ),
 
-            imageUrl:
-                product.imageUrl ||
-                "",
-
             categoryId:
                 product.category
                     ?.id || "",
         });
+
+        setPreviewImage(
+            product.imageUrl ||
+                "",
+        );
 
         window.scrollTo({
             top: 0,
@@ -309,7 +361,8 @@ export default function AdminProductsPage() {
                     </h1>
 
                     <p className="text-sm text-slate-400 mt-2">
-                        Kelola semua product toko
+                        Kelola semua
+                        product toko
                     </p>
                 </div>
 
@@ -324,7 +377,8 @@ export default function AdminProductsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="text-sm font-bold text-slate-700">
-                                    Nama Product
+                                    Nama
+                                    Product
                                 </label>
 
                                 <div className="relative mt-2">
@@ -393,25 +447,43 @@ export default function AdminProductsPage() {
 
                             <div>
                                 <label className="text-sm font-bold text-slate-700">
-                                    Image URL
+                                    Upload
+                                    Foto
                                 </label>
 
                                 <div className="relative mt-2">
-                                    <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
 
                                     <input
-                                        type="text"
-                                        name="imageUrl"
-                                        value={
-                                            form.imageUrl
-                                        }
+                                        type="file"
+                                        accept="image/*"
                                         onChange={
-                                            handleChange
+                                            handleFileChange
                                         }
-                                        placeholder="https://..."
-                                        className="w-full border border-slate-200 rounded-2xl pl-11 pr-4 py-3 outline-none focus:ring-2 focus:ring-pink-500/20"
+                                        className="w-full border border-slate-200 rounded-2xl pl-11 pr-4 py-3 outline-none focus:ring-2 focus:ring-pink-500/20 file:border-0 file:bg-pink-50 file:text-pink-600 file:px-3 file:py-1 file:rounded-lg file:mr-3"
                                     />
                                 </div>
+
+                                {selectedFile && (
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        {
+                                            selectedFile.name
+                                        }
+                                    </p>
+                                )}
+
+                                {previewImage && (
+                                    <div className="relative w-full h-52 mt-4 rounded-2xl overflow-hidden border border-slate-200">
+                                        <Image
+                                            src={
+                                                previewImage
+                                            }
+                                            alt="Preview"
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <button
@@ -446,7 +518,8 @@ export default function AdminProductsPage() {
                                     }
                                     className="w-full border border-slate-200 py-3 rounded-2xl font-bold text-slate-600"
                                 >
-                                    Batal Edit
+                                    Batal
+                                    Edit
                                 </button>
                             )}
                         </div>
@@ -456,14 +529,16 @@ export default function AdminProductsPage() {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900">
-                                    Daftar Product
+                                    Daftar
+                                    Product
                                 </h2>
 
                                 <p className="text-sm text-slate-400 mt-1">
                                     {
                                         filteredProducts.length
                                     }{" "}
-                                    product ditemukan
+                                    product
+                                    ditemukan
                                 </p>
                             </div>
 
