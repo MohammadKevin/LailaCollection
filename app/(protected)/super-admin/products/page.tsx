@@ -9,18 +9,17 @@ import React, {
 import Image from "next/image";
 
 import {
+  FolderPlus,
+  ImagePlus,
+  Loader2,
   Package,
+  Pencil,
   Plus,
   Search,
-  Loader2,
+  Store,
   Tag,
   Trash2,
-  Store,
-  Boxes,
-  Wallet,
-  FolderPlus,
   X,
-  ImagePlus,
 } from "lucide-react";
 
 import api from "@/lib/api";
@@ -57,6 +56,16 @@ type Product = {
   };
 };
 
+const initialForm = {
+  name: "",
+  stock: "",
+  minStock: "",
+  costPrice: "",
+  sellingPrice: "",
+  categoryId: "",
+  outletId: "",
+};
+
 export default function ProductPage() {
   const [loading, setLoading] =
     useState(true);
@@ -64,10 +73,10 @@ export default function ProductPage() {
   const [submitting, setSubmitting] =
     useState(false);
 
-  const [search, setSearch] =
+  const [error, setError] =
     useState("");
 
-  const [error, setError] =
+  const [search, setSearch] =
     useState("");
 
   const [products, setProducts] =
@@ -88,6 +97,9 @@ export default function ProductPage() {
   const [openProductModal, setOpenProductModal] =
     useState(false);
 
+  const [editingProduct, setEditingProduct] =
+    useState<Product | null>(null);
+
   const [newCategory, setNewCategory] =
     useState("");
 
@@ -98,30 +110,30 @@ export default function ProductPage() {
     useState<File | null>(null);
 
   const [productForm, setProductForm] =
-    useState({
-      name: "",
-      sku: "",
-      barcode: "",
-      stock: "",
-      minStock: "",
-      costPrice: "",
-      sellingPrice: "",
-      categoryId: "",
-      outletId: "",
-    });
+    useState(initialForm);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(
+          imagePreview
+        );
+      }
+    };
+  }, [imagePreview]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
       const [
-        productsResponse,
-        categoriesResponse,
-        outletsResponse,
+        productsRes,
+        categoriesRes,
+        outletsRes,
       ] = await Promise.all([
         api.get("/products"),
         api.get("/categories"),
@@ -129,21 +141,19 @@ export default function ProductPage() {
       ]);
 
       setProducts(
-        productsResponse.data || []
+        productsRes.data || []
       );
 
       setCategories(
-        categoriesResponse.data || []
+        categoriesRes.data || []
       );
 
       setOutlets(
-        outletsResponse.data || []
+        outletsRes.data || []
       );
-    } catch (error: any) {
-      console.error(error);
-
+    } catch (err: any) {
       setError(
-        error?.response?.data?.message ||
+        err?.response?.data?.message ||
           "Gagal mengambil data"
       );
     } finally {
@@ -153,13 +163,16 @@ export default function ProductPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      const keyword =
+        search.toLowerCase();
+
       const matchSearch =
         product.name
           .toLowerCase()
-          .includes(search.toLowerCase()) ||
+          .includes(keyword) ||
         product.sku
           ?.toLowerCase()
-          .includes(search.toLowerCase());
+          .includes(keyword);
 
       const matchCategory =
         !selectedCategory ||
@@ -177,18 +190,41 @@ export default function ProductPage() {
   ]);
 
   const totalStock = products.reduce(
-    (acc, product) =>
-      acc + product.stock,
+    (acc, item) => acc + item.stock,
     0
   );
 
   const totalValue = products.reduce(
-    (acc, product) =>
+    (acc, item) =>
       acc +
-      product.stock *
-        product.sellingPrice,
+      item.stock *
+        item.sellingPrice,
     0
   );
+
+  const resetProductForm = () => {
+    setEditingProduct(null);
+
+    setProductForm(initialForm);
+
+    setProductImage(null);
+
+    setImagePreview("");
+  };
+
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setProductImage(file);
+
+    setImagePreview(
+      URL.createObjectURL(file)
+    );
+  };
 
   const handleCreateCategory = async (
     e: React.FormEvent
@@ -207,30 +243,14 @@ export default function ProductPage() {
       setOpenCategoryModal(false);
 
       fetchData();
-    } catch (error: any) {
-      console.error(error);
-
+    } catch (err: any) {
       alert(
-        error?.response?.data?.message ||
-          "Gagal membuat kategori"
+        err?.response?.data?.message ||
+          "Gagal tambah kategori"
       );
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleImageChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    setProductImage(file);
-
-    setImagePreview(
-      URL.createObjectURL(file)
-    );
   };
 
   const handleCreateProduct = async (
@@ -241,52 +261,16 @@ export default function ProductPage() {
     try {
       setSubmitting(true);
 
-      const formData = new FormData();
+      const formData =
+        new FormData();
 
-      formData.append(
-        "name",
-        productForm.name
-      );
-
-      formData.append(
-        "sku",
-        productForm.sku
-      );
-
-      formData.append(
-        "barcode",
-        productForm.barcode
-      );
-
-      formData.append(
-        "stock",
-        productForm.stock
-      );
-
-      formData.append(
-        "minStock",
-        productForm.minStock
-      );
-
-      formData.append(
-        "costPrice",
-        productForm.costPrice
-      );
-
-      formData.append(
-        "sellingPrice",
-        productForm.sellingPrice
-      );
-
-      formData.append(
-        "categoryId",
-        productForm.categoryId
-      );
-
-      formData.append(
-        "outletId",
-        productForm.outletId
-      );
+      Object.entries(
+        productForm
+      ).forEach(([key, value]) => {
+        if (value) {
+          formData.append(key, value);
+        }
+      });
 
       if (productImage) {
         formData.append(
@@ -306,30 +290,14 @@ export default function ProductPage() {
         }
       );
 
+      resetProductForm();
+
       setOpenProductModal(false);
 
-      setProductForm({
-        name: "",
-        sku: "",
-        barcode: "",
-        stock: "",
-        minStock: "",
-        costPrice: "",
-        sellingPrice: "",
-        categoryId: "",
-        outletId: "",
-      });
-
-      setProductImage(null);
-
-      setImagePreview("");
-
       fetchData();
-    } catch (error: any) {
-      console.error(error);
-
+    } catch (err: any) {
       alert(
-        error?.response?.data?.message ||
+        err?.response?.data?.message ||
           "Gagal tambah produk"
       );
     } finally {
@@ -337,85 +305,180 @@ export default function ProductPage() {
     }
   };
 
-  const handleDeleteCategory = async (
-    id: string,
-    name: string
+  const handleUpdateProduct = async (
+    e: React.FormEvent
   ) => {
-    const confirmed = confirm(
-      `Hapus kategori ${name}?`
-    );
+    e.preventDefault();
 
-    if (!confirmed) return;
+    if (!editingProduct) return;
 
     try {
-      await api.delete(
-        `/categories/${id}`
+      setSubmitting(true);
+
+      const formData =
+        new FormData();
+
+      Object.entries(
+        productForm
+      ).forEach(([key, value]) => {
+        if (value) {
+          formData.append(key, value);
+        }
+      });
+
+      if (productImage) {
+        formData.append(
+          "image",
+          productImage
+        );
+      }
+
+      await api.patch(
+        `/products/${editingProduct.id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type":
+              "multipart/form-data",
+          },
+        }
       );
+
+      resetProductForm();
+
+      setOpenProductModal(false);
 
       fetchData();
-    } catch (error: any) {
-      console.error(error);
-
+    } catch (err: any) {
       alert(
-        error?.response?.data?.message ||
-          "Gagal hapus kategori"
+        err?.response?.data?.message ||
+          "Gagal update produk"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteProduct = async (
-    id: string,
-    name: string
+  const handleEditClick = (
+    product: Product
   ) => {
-    const confirmed = confirm(
-      `Hapus produk ${name}?`
+    setEditingProduct(product);
+
+    setProductForm({
+      name: product.name || "",
+      stock: String(
+        product.stock || ""
+      ),
+      minStock: String(
+        product.minStock || ""
+      ),
+      costPrice: String(
+        product.costPrice || ""
+      ),
+      sellingPrice: String(
+        product.sellingPrice || ""
+      ),
+      categoryId:
+        product.category?.id || "",
+      outletId:
+        product.outlet?.id || "",
+    });
+
+    setImagePreview(
+      product.imageUrl || ""
     );
 
-    if (!confirmed) return;
-
-    try {
-      await api.delete(`/products/${id}`);
-
-      fetchData();
-    } catch (error: any) {
-      console.error(error);
-
-      alert(
-        error?.response?.data?.message ||
-          "Gagal hapus produk"
-      );
-    }
+    setOpenProductModal(true);
   };
+
+  const handleDeleteCategory =
+    async (
+      id: string,
+      name: string
+    ) => {
+      const confirmed = confirm(
+        `Hapus kategori ${name}?`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        await api.delete(
+          `/categories/${id}`
+        );
+
+        fetchData();
+      } catch (err: any) {
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Gagal hapus kategori"
+        );
+      }
+    };
+
+  const handleDeleteProduct =
+    async (
+      id: string,
+      name: string
+    ) => {
+      const confirmed = confirm(
+        `Hapus produk ${name}?`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        await api.delete(
+          `/products/${id}`
+        );
+
+        fetchData();
+      } catch (err: any) {
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Gagal hapus produk"
+        );
+      }
+    };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">
-            Produk & Kategori
+          <h1 className="text-2xl font-bold text-slate-800">
+            Produk &
+            Kategori
           </h1>
 
           <p className="text-sm text-slate-500 mt-1">
-            Kelola produk dan kategori
+            Kelola data produk
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() =>
-              setOpenCategoryModal(true)
+              setOpenCategoryModal(
+                true
+              )
             }
-            className="h-11 px-4 border border-slate-300 rounded-xl flex items-center gap-2 text-sm font-medium hover:bg-slate-100"
+            className="h-11 px-4 border border-slate-300 rounded-2xl flex items-center gap-2 hover:bg-slate-100"
           >
             <FolderPlus className="w-4 h-4" />
             Kategori
           </button>
 
           <button
-            onClick={() =>
-              setOpenProductModal(true)
-            }
-            className="h-11 px-5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center gap-2 text-sm font-medium"
+            onClick={() => {
+              resetProductForm();
+
+              setOpenProductModal(
+                true
+              );
+            }}
+            className="h-11 px-5 bg-slate-900 text-white rounded-2xl flex items-center gap-2 hover:bg-slate-800"
           >
             <Plus className="w-4 h-4" />
             Produk
@@ -423,52 +486,37 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="mt-5 bg-red-50 border border-red-200 text-red-600 rounded-2xl px-4 py-3 text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <p className="text-sm text-slate-500">
-            Produk
-          </p>
+        <Card
+          title="Produk"
+          value={products.length}
+        />
 
-          <h2 className="text-2xl font-bold mt-2">
-            {products.length}
-          </h2>
-        </div>
+        <Card
+          title="Kategori"
+          value={categories.length}
+        />
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <p className="text-sm text-slate-500">
-            Kategori
-          </p>
+        <Card
+          title="Stock"
+          value={totalStock}
+        />
 
-          <h2 className="text-2xl font-bold mt-2">
-            {categories.length}
-          </h2>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <p className="text-sm text-slate-500">
-            Stock
-          </p>
-
-          <h2 className="text-2xl font-bold mt-2">
-            {totalStock}
-          </h2>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <p className="text-sm text-slate-500">
-            Nilai
-          </p>
-
-          <h2 className="text-xl font-bold mt-2">
-            Rp
-            {totalValue.toLocaleString(
-              "id-ID"
-            )}
-          </h2>
-        </div>
+        <Card
+          title="Nilai"
+          value={`Rp ${totalValue.toLocaleString(
+            "id-ID"
+          )}`}
+        />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 mt-5">
+      <div className="bg-white border border-slate-200 rounded-3xl p-4 mt-5">
         <div className="relative max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
 
@@ -477,310 +525,252 @@ export default function ProductPage() {
             placeholder="Cari produk..."
             value={search}
             onChange={(e) =>
-              setSearch(e.target.value)
+              setSearch(
+                e.target.value
+              )
             }
-            className="w-full h-11 border border-slate-300 rounded-xl pl-10 pr-4"
+            className="w-full h-11 border border-slate-300 rounded-2xl pl-10 pr-4 outline-none"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-5 mt-5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 h-fit">
-          <h2 className="font-semibold mb-4">
-            Kategori
-          </h2>
-
-          <div className="space-y-2">
-            <button
-              onClick={() =>
-                setSelectedCategory("")
-              }
-              className={`w-full text-left px-4 py-3 rounded-xl ${
-                selectedCategory === ""
-                  ? "bg-slate-900 text-white"
-                  : "hover:bg-slate-100"
-              }`}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
+        {filteredProducts.map(
+          (product) => (
+            <div
+              key={product.id}
+              className="bg-white border border-slate-200 rounded-3xl overflow-hidden"
             >
-              Semua Produk
-            </button>
+              <div className="relative h-56 bg-slate-100">
+                <div className="absolute top-3 right-3 z-10 bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  Stock{" "}
+                  {product.stock}
+                </div>
 
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className={`flex items-center justify-between rounded-xl ${
-                  selectedCategory ===
-                  category.id
-                    ? "bg-pink-600 text-white"
-                    : "hover:bg-slate-100"
-                }`}
-              >
-                <button
-                  onClick={() =>
-                    setSelectedCategory(
-                      category.id
-                    )
-                  }
-                  className="flex-1 text-left px-4 py-3"
-                >
-                  {category.name}
-                </button>
-
-                <button
-                  onClick={() =>
-                    handleDeleteCategory(
-                      category.id,
-                      category.name
-                    )
-                  }
-                  className="px-3"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          {loading ? (
-            <div className="h-[400px] bg-white rounded-2xl border border-slate-200 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filteredProducts.map(
-                (product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden"
-                  >
-                    <div className="relative h-52 bg-slate-100">
-                      {product.imageUrl ? (
-                        <Image
-                          src={
-                            product.imageUrl
-                          }
-                          alt={product.name}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-14 h-14 text-slate-300" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-5">
-                      <h2 className="font-semibold">
-                        {product.name}
-                      </h2>
-
-                      <p className="text-xs text-slate-400 mt-1">
-                        SKU:{" "}
-                        {product.sku || "-"}
-                      </p>
-
-                      <div className="mt-4 space-y-2 text-sm text-slate-500">
-                        <div className="flex items-center gap-2">
-                          <Tag className="w-4 h-4" />
-                          {
-                            product.category
-                              ?.name
-                          }
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Store className="w-4 h-4" />
-                          {
-                            product.outlet
-                              ?.name
-                          }
-                        </div>
-                      </div>
-
-                      <div className="mt-5 pt-4 border-t flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-slate-400">
-                            Harga
-                          </p>
-
-                          <h3 className="text-lg font-bold text-pink-600">
-                            Rp
-                            {product.sellingPrice.toLocaleString(
-                              "id-ID"
-                            )}
-                          </h3>
-                        </div>
-
-                        <button
-                          onClick={() =>
-                            handleDeleteProduct(
-                              product.id,
-                              product.name
-                            )
-                          }
-                          className="w-10 h-10 rounded-xl border border-red-200 hover:bg-red-50 flex items-center justify-center"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
-                      </div>
-                    </div>
+                {product.imageUrl ? (
+                  <Image
+                    src={
+                      product.imageUrl
+                    }
+                    alt={
+                      product.name
+                    }
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-16 h-16 text-slate-300" />
                   </div>
-                )
-              )}
+                )}
+              </div>
+
+              <div className="p-5">
+                <h2 className="font-semibold text-lg">
+                  {product.name}
+                </h2>
+
+                <p className="text-xs text-slate-400 mt-1">
+                  SKU:{" "}
+                  {product.sku || "-"}
+                </p>
+
+                <p className="text-xs text-slate-400">
+                  Barcode:{" "}
+                  {product.barcode ||
+                    "-"}
+                </p>
+
+                <div className="mt-4 space-y-2 text-sm text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    {
+                      product.category
+                        ?.name
+                    }
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Store className="w-4 h-4" />
+                    {
+                      product.outlet
+                        ?.name
+                    }
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-4 border-t flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-400">
+                      Harga
+                    </p>
+
+                    <h3 className="text-xl font-bold text-pink-600">
+                      Rp
+                      {product.sellingPrice.toLocaleString(
+                        "id-ID"
+                      )}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        handleEditClick(
+                          product
+                        )
+                      }
+                      className="w-11 h-11 rounded-2xl border border-blue-200 flex items-center justify-center hover:bg-blue-50"
+                    >
+                      <Pencil className="w-4 h-4 text-blue-500" />
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        handleDeleteProduct(
+                          product.id,
+                          product.name
+                        )
+                      }
+                      className="w-11 h-11 rounded-2xl border border-red-200 flex items-center justify-center hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+          )
+        )}
       </div>
 
       {openCategoryModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-semibold">
+        <Modal>
+          <form
+            onSubmit={
+              handleCreateCategory
+            }
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">
                 Tambah Kategori
               </h2>
 
               <button
+                type="button"
                 onClick={() =>
-                  setOpenCategoryModal(false)
+                  setOpenCategoryModal(
+                    false
+                  )
                 }
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={
-                handleCreateCategory
+            <Input
+              placeholder="Nama kategori"
+              value={newCategory}
+              onChange={(e) =>
+                setNewCategory(
+                  e.target.value
+                )
               }
-              className="space-y-4"
-            >
-              <input
-                type="text"
-                required
-                placeholder="Nama kategori"
-                value={newCategory}
-                onChange={(e) =>
-                  setNewCategory(
-                    e.target.value
-                  )
-                }
-                className="w-full h-11 border border-slate-300 rounded-xl px-4"
-              />
+            />
 
-              <button
-                type="submit"
-                className="w-full h-11 bg-slate-900 text-white rounded-xl"
-              >
-                Simpan
-              </button>
-            </form>
-          </div>
-        </div>
+            <button
+              type="submit"
+              className="w-full h-11 bg-slate-900 text-white rounded-2xl"
+            >
+              Simpan
+            </button>
+          </form>
+        </Modal>
       )}
 
       {openProductModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="w-full max-w-2xl bg-white rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">
-                Tambah Produk
+        <Modal maxWidth="max-w-2xl">
+          <form
+            onSubmit={
+              editingProduct
+                ? handleUpdateProduct
+                : handleCreateProduct
+            }
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">
+                {editingProduct
+                  ? "Edit Produk"
+                  : "Tambah Produk"}
               </h2>
 
               <button
-                onClick={() =>
-                  setOpenProductModal(false)
-                }
+                type="button"
+                onClick={() => {
+                  setOpenProductModal(
+                    false
+                  );
+
+                  resetProductForm();
+                }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={handleCreateProduct}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            >
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-600">
-                  Foto Produk
-                </label>
+            <label className="h-56 border-2 border-dashed border-slate-300 rounded-3xl overflow-hidden flex items-center justify-center cursor-pointer relative">
+              {imagePreview ? (
+                <Image
+                  src={imagePreview}
+                  alt="Preview"
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ImagePlus className="w-10 h-10 text-slate-400" />
 
-                <label className="mt-2 border-2 border-dashed border-slate-300 rounded-2xl h-56 flex flex-col items-center justify-center cursor-pointer overflow-hidden">
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <>
-                      <ImagePlus className="w-10 h-10 text-slate-400" />
-
-                      <p className="text-sm text-slate-500 mt-3">
-                        Upload gambar
-                      </p>
-                    </>
-                  )}
-
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={
-                      handleImageChange
-                    }
-                  />
-                </label>
-              </div>
+                  <p className="text-sm text-slate-500 mt-3">
+                    Upload gambar
+                  </p>
+                </div>
+              )}
 
               <input
-                type="text"
-                required
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={
+                  handleImageChange
+                }
+              />
+            </label>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
                 placeholder="Nama produk"
-                value={productForm.name}
-                onChange={(e) =>
-                  setProductForm({
-                    ...productForm,
-                    name: e.target.value,
-                  })
+                value={
+                  productForm.name
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
-              />
-
-              <input
-                type="text"
-                placeholder="SKU"
-                value={productForm.sku}
                 onChange={(e) =>
                   setProductForm({
                     ...productForm,
-                    sku: e.target.value,
-                  })
-                }
-                className="h-11 border border-slate-300 rounded-xl px-4"
-              />
-
-              <input
-                type="text"
-                placeholder="Barcode"
-                value={productForm.barcode}
-                onChange={(e) =>
-                  setProductForm({
-                    ...productForm,
-                    barcode:
+                    name:
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
               />
 
-              <input
+              <Input
                 type="number"
-                required
                 placeholder="Stock"
-                value={productForm.stock}
+                value={
+                  productForm.stock
+                }
                 onChange={(e) =>
                   setProductForm({
                     ...productForm,
@@ -788,12 +778,10 @@ export default function ProductPage() {
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
               />
 
-              <input
+              <Input
                 type="number"
-                required
                 placeholder="Min stock"
                 value={
                   productForm.minStock
@@ -805,12 +793,10 @@ export default function ProductPage() {
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
               />
 
-              <input
+              <Input
                 type="number"
-                required
                 placeholder="Harga modal"
                 value={
                   productForm.costPrice
@@ -822,12 +808,10 @@ export default function ProductPage() {
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
               />
 
-              <input
+              <Input
                 type="number"
-                required
                 placeholder="Harga jual"
                 value={
                   productForm.sellingPrice
@@ -839,7 +823,6 @@ export default function ProductPage() {
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
               />
 
               <select
@@ -854,7 +837,7 @@ export default function ProductPage() {
                       e.target.value,
                   })
                 }
-                className="h-11 border border-slate-300 rounded-xl px-4"
+                className="h-11 border border-slate-300 rounded-2xl px-4 outline-none"
               >
                 <option value="">
                   Pilih kategori
@@ -863,10 +846,16 @@ export default function ProductPage() {
                 {categories.map(
                   (category) => (
                     <option
-                      key={category.id}
-                      value={category.id}
+                      key={
+                        category.id
+                      }
+                      value={
+                        category.id
+                      }
                     >
-                      {category.name}
+                      {
+                        category.name
+                      }
                     </option>
                   )
                 )}
@@ -885,38 +874,128 @@ export default function ProductPage() {
                         e.target.value,
                     })
                   }
-                  className="w-full h-11 border border-slate-300 rounded-xl px-4"
+                  className="w-full h-11 border border-slate-300 rounded-2xl px-4 outline-none"
                 >
                   <option value="">
                     Pilih outlet
                   </option>
 
-                  {outlets.map((outlet) => (
-                    <option
-                      key={outlet.id}
-                      value={outlet.id}
-                    >
-                      {outlet.name}
-                    </option>
-                  ))}
+                  {outlets.map(
+                    (outlet) => (
+                      <option
+                        key={
+                          outlet.id
+                        }
+                        value={
+                          outlet.id
+                        }
+                      >
+                        {
+                          outlet.name
+                        }
+                      </option>
+                    )
+                  )}
                 </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3">
+                  <p className="text-sm text-slate-500">
+                    SKU dan Barcode
+                    otomatis dibuat
+                    sistem
+                  </p>
+                </div>
               </div>
 
               <div className="md:col-span-2">
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="w-full h-11 bg-slate-900 text-white rounded-xl"
+                  disabled={
+                    submitting
+                  }
+                  className="w-full h-11 bg-slate-900 text-white rounded-2xl"
                 >
-                  {submitting
-                    ? "Menyimpan..."
-                    : "Simpan Produk"}
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Menyimpan...
+                    </span>
+                  ) : editingProduct ? (
+                    "Update Produk"
+                  ) : (
+                    "Simpan Produk"
+                  )}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
+  );
+}
+
+function Card({
+  title,
+  value,
+}: {
+  title: string;
+  value: string | number;
+}) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-3xl p-5">
+      <p className="text-sm text-slate-500">
+        {title}
+      </p>
+
+      <h2 className="text-2xl font-bold mt-2">
+        {value}
+      </h2>
+    </div>
+  );
+}
+
+function Modal({
+  children,
+  maxWidth = "max-w-md",
+}: {
+  children: React.ReactNode;
+  maxWidth?: string;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div
+        className={`w-full ${maxWidth} bg-white rounded-3xl p-6`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Input({
+  type = "text",
+  placeholder,
+  value,
+  onChange,
+}: {
+  type?: string;
+  placeholder: string;
+  value: string;
+  onChange: (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => void;
+}) {
+  return (
+    <input
+      required
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className="h-11 border border-slate-300 rounded-2xl px-4 outline-none"
+    />
   );
 }
