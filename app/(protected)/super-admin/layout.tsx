@@ -46,25 +46,6 @@ const menus = [
   },
 
   {
-    label: "Inventori",
-    icon: Boxes,
-
-    children: [
-      {
-        label: "Stock Masuk",
-        href:
-          "/super-admin/inventory/in",
-      },
-
-      {
-        label: "Stock Keluar",
-        href:
-          "/super-admin/inventory/out",
-      },
-    ],
-  },
-
-  {
     label: "Laporan",
     icon: FileText,
 
@@ -72,13 +53,13 @@ const menus = [
       {
         label: "Laporan Penjualan",
         href:
-          "/super-admin/reports/sales",
+          "/super-admin/reports/penjualan",
       },
 
       {
-        label: "Laporan Inventori",
+        label: "Laporan Operasional",
         href:
-          "/super-admin/reports/inventory",
+          "/super-admin/reports/operasional",
       },
     ],
   },
@@ -299,7 +280,7 @@ export default function SuperAdminLayout({
         </div>
 
         <div className="p-3 border-t border-slate-200">
-          <Link href="/login">
+          <Link href="/Login">
             <button
               className={`w-full flex items-center px-4 py-3 rounded-2xl text-sm font-medium text-red-500 hover:bg-red-50 transition ${
                 collapsed
