@@ -88,17 +88,27 @@ export default function ProductPage() {
   const [outlets, setOutlets] =
     useState<Outlet[]>([]);
 
-  const [selectedCategory, setSelectedCategory] =
-    useState("");
+  const [
+    selectedCategory,
+    setSelectedCategory,
+  ] = useState("");
 
-  const [openCategoryModal, setOpenCategoryModal] =
-    useState(false);
+  const [
+    openCategoryModal,
+    setOpenCategoryModal,
+  ] = useState(false);
 
-  const [openProductModal, setOpenProductModal] =
-    useState(false);
+  const [
+    openProductModal,
+    setOpenProductModal,
+  ] = useState(false);
 
-  const [editingProduct, setEditingProduct] =
-    useState<Product | null>(null);
+  const [
+    editingProduct,
+    setEditingProduct,
+  ] = useState<Product | null>(
+    null
+  );
 
   const [newCategory, setNewCategory] =
     useState("");
@@ -118,7 +128,12 @@ export default function ProductPage() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
+      if (
+        imagePreview &&
+        imagePreview.startsWith(
+          "blob:"
+        )
+      ) {
         URL.revokeObjectURL(
           imagePreview
         );
@@ -221,64 +236,73 @@ export default function ProductPage() {
 
     setProductImage(file);
 
+    if (
+      imagePreview &&
+      imagePreview.startsWith(
+        "blob:"
+      )
+    ) {
+      URL.revokeObjectURL(
+        imagePreview
+      );
+    }
+
     setImagePreview(
       URL.createObjectURL(file)
     );
   };
 
-  const handleCreateCategory = async (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
+  const handleCreateCategory =
+    async (
+      e: React.FormEvent
+    ) => {
+      e.preventDefault();
 
-    try {
-      setSubmitting(true);
+      try {
+        setSubmitting(true);
 
-      await api.post("/categories", {
-        name: newCategory,
-      });
+        await api.post("/categories", {
+          name: newCategory,
+        });
 
-      setNewCategory("");
+        setNewCategory("");
 
-      setOpenCategoryModal(false);
+        setOpenCategoryModal(false);
 
-      fetchData();
-    } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          "Gagal tambah kategori"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCreateProduct = async (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
-
-    try {
-      setSubmitting(true);
-
-      const formData =
-        new FormData();
-
-      Object.entries(
-        productForm
-      ).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
-        }
-      });
-
-      if (productImage) {
-        formData.append(
-          "image",
-          productImage
+        fetchData();
+      } catch (err: any) {
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Gagal tambah kategori"
         );
+      } finally {
+        setSubmitting(false);
       }
+    };
 
+  const submitProduct = async (
+    method: "post" | "patch"
+  ) => {
+    const formData =
+      new FormData();
+
+    Object.entries(
+      productForm
+    ).forEach(([key, value]) => {
+      if (value) {
+        formData.append(key, value);
+      }
+    });
+
+    if (productImage) {
+      formData.append(
+        "image",
+        productImage
+      );
+    }
+
+    if (method === "post") {
       await api.post(
         "/products",
         formData,
@@ -289,52 +313,9 @@ export default function ProductPage() {
           },
         }
       );
-
-      resetProductForm();
-
-      setOpenProductModal(false);
-
-      fetchData();
-    } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          "Gagal tambah produk"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateProduct = async (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
-
-    if (!editingProduct) return;
-
-    try {
-      setSubmitting(true);
-
-      const formData =
-        new FormData();
-
-      Object.entries(
-        productForm
-      ).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
-        }
-      });
-
-      if (productImage) {
-        formData.append(
-          "image",
-          productImage
-        );
-      }
-
+    } else {
       await api.patch(
-        `/products/${editingProduct.id}`,
+        `/products/${editingProduct?.id}`,
         formData,
         {
           headers: {
@@ -343,21 +324,39 @@ export default function ProductPage() {
           },
         }
       );
-
-      resetProductForm();
-
-      setOpenProductModal(false);
-
-      fetchData();
-    } catch (err: any) {
-      alert(
-        err?.response?.data?.message ||
-          "Gagal update produk"
-      );
-    } finally {
-      setSubmitting(false);
     }
   };
+
+  const handleSubmitProduct =
+    async (
+      e: React.FormEvent
+    ) => {
+      e.preventDefault();
+
+      try {
+        setSubmitting(true);
+
+        await submitProduct(
+          editingProduct
+            ? "patch"
+            : "post"
+        );
+
+        resetProductForm();
+
+        setOpenProductModal(false);
+
+        fetchData();
+      } catch (err: any) {
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Gagal simpan produk"
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    };
 
   const handleEditClick = (
     product: Product
@@ -443,6 +442,14 @@ export default function ProductPage() {
       }
     };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 animate-spin text-slate-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="bg-white border border-slate-200 rounded-3xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -457,14 +464,14 @@ export default function ProductPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={() =>
               setOpenCategoryModal(
                 true
               )
             }
-            className="h-11 px-4 border border-slate-300 rounded-2xl flex items-center gap-2 hover:bg-slate-100"
+            className="h-11 px-4 border border-slate-300 rounded-2xl flex items-center gap-2 hover:bg-slate-100 transition"
           >
             <FolderPlus className="w-4 h-4" />
             Kategori
@@ -478,7 +485,7 @@ export default function ProductPage() {
                 true
               );
             }}
-            className="h-11 px-5 bg-slate-900 text-white rounded-2xl flex items-center gap-2 hover:bg-slate-800"
+            className="h-11 px-5 bg-slate-900 text-white rounded-2xl flex items-center gap-2 hover:bg-slate-800 transition"
           >
             <Plus className="w-4 h-4" />
             Produk
@@ -517,133 +524,192 @@ export default function ProductPage() {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl p-4 mt-5">
-        <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
 
-          <input
-            type="text"
-            placeholder="Cari produk..."
-            value={search}
+            <input
+              type="text"
+              placeholder="Cari produk..."
+              value={search}
+              onChange={(e) =>
+                setSearch(
+                  e.target.value
+                )
+              }
+              className="w-full h-11 border border-slate-300 rounded-2xl pl-10 pr-4 outline-none"
+            />
+          </div>
+
+          <select
+            value={selectedCategory}
             onChange={(e) =>
-              setSearch(
+              setSelectedCategory(
                 e.target.value
               )
             }
-            className="w-full h-11 border border-slate-300 rounded-2xl pl-10 pr-4 outline-none"
-          />
+            className="h-11 border border-slate-300 rounded-2xl px-4 outline-none"
+          >
+            <option value="">
+              Semua kategori
+            </option>
+
+            {categories.map(
+              (category) => (
+                <option
+                  key={category.id}
+                  value={category.id}
+                >
+                  {category.name}
+                </option>
+              )
+            )}
+          </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
-        {filteredProducts.map(
-          (product) => (
-            <div
-              key={product.id}
-              className="bg-white border border-slate-200 rounded-3xl overflow-hidden"
-            >
-              <div className="relative h-56 bg-slate-100">
-                <div className="absolute top-3 right-3 z-10 bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                  Stock{" "}
-                  {product.stock}
-                </div>
+      {filteredProducts.length ===
+      0 ? (
+        <div className="bg-white border border-slate-200 rounded-3xl p-10 mt-5 text-center">
+          <Package className="w-14 h-14 text-slate-300 mx-auto" />
 
-                {product.imageUrl ? (
-                  <Image
-                    src={
-                      product.imageUrl
-                    }
-                    alt={
-                      product.name
-                    }
-                    fill
-                    sizes="100vw"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-16 h-16 text-slate-300" />
-                  </div>
-                )}
-              </div>
+          <h2 className="mt-4 font-semibold text-lg">
+            Produk tidak ditemukan
+          </h2>
 
-              <div className="p-5">
-                <h2 className="font-semibold text-lg">
-                  {product.name}
-                </h2>
-
-                <p className="text-xs text-slate-400 mt-1">
-                  SKU:{" "}
-                  {product.sku || "-"}
-                </p>
-
-                <p className="text-xs text-slate-400">
-                  Barcode:{" "}
-                  {product.barcode ||
-                    "-"}
-                </p>
-
-                <div className="mt-4 space-y-2 text-sm text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <Tag className="w-4 h-4" />
-                    {
-                      product.category
-                        ?.name
-                    }
+          <p className="text-sm text-slate-500 mt-1">
+            Tambahkan produk baru
+            atau ubah pencarian
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-5">
+          {filteredProducts.map(
+            (
+              product,
+              index
+            ) => (
+              <div
+                key={product.id}
+                className="bg-white border border-slate-200 rounded-3xl overflow-hidden"
+              >
+                <div className="relative h-56 bg-slate-100">
+                  <div className="absolute top-3 right-3 z-10 bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    Stock{" "}
+                    {product.stock}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Store className="w-4 h-4" />
-                    {
-                      product.outlet
-                        ?.name
-                    }
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-4 border-t flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-400">
-                      Harga
-                    </p>
-
-                    <h3 className="text-xl font-bold text-pink-600">
-                      Rp
-                      {product.sellingPrice.toLocaleString(
-                        "id-ID"
-                      )}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        handleEditClick(
-                          product
-                        )
+                  {product.imageUrl ? (
+                    <Image
+                      src={
+                        product.imageUrl
                       }
-                      className="w-11 h-11 rounded-2xl border border-blue-200 flex items-center justify-center hover:bg-blue-50"
-                    >
-                      <Pencil className="w-4 h-4 text-blue-500" />
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleDeleteProduct(
-                          product.id,
-                          product.name
-                        )
+                      alt={
+                        product.name
                       }
-                      className="w-11 h-11 rounded-2xl border border-red-200 flex items-center justify-center hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
+                      fill
+                      priority={
+                        index === 0
+                      }
+                      loading={
+                        index === 0
+                          ? "eager"
+                          : "lazy"
+                      }
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="w-16 h-16 text-slate-300" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-5">
+                  <h2 className="font-semibold text-lg line-clamp-1">
+                    {product.name}
+                  </h2>
+
+                  <p className="text-xs text-slate-400 mt-1">
+                    SKU:{" "}
+                    {product.sku ||
+                      "-"}
+                  </p>
+
+                  <p className="text-xs text-slate-400">
+                    Barcode:{" "}
+                    {product.barcode ||
+                      "-"}
+                  </p>
+
+                  <div className="mt-4 space-y-2 text-sm text-slate-500">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      <span>
+                        {product
+                          .category
+                          ?.name ||
+                          "-"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4" />
+                      <span>
+                        {product
+                          .outlet
+                          ?.name ||
+                          "-"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        Harga
+                      </p>
+
+                      <h3 className="text-xl font-bold text-pink-600">
+                        Rp
+                        {product.sellingPrice.toLocaleString(
+                          "id-ID"
+                        )}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          handleEditClick(
+                            product
+                          )
+                        }
+                        className="w-11 h-11 rounded-2xl border border-blue-200 flex items-center justify-center hover:bg-blue-50 transition"
+                      >
+                        <Pencil className="w-4 h-4 text-blue-500" />
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleDeleteProduct(
+                            product.id,
+                            product.name
+                          )
+                        }
+                        className="w-11 h-11 rounded-2xl border border-red-200 flex items-center justify-center hover:bg-red-50 transition"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )
-        )}
-      </div>
+            )
+          )}
+        </div>
+      )}
 
       {openCategoryModal && (
         <Modal>
@@ -682,9 +748,12 @@ export default function ProductPage() {
 
             <button
               type="submit"
+              disabled={submitting}
               className="w-full h-11 bg-slate-900 text-white rounded-2xl"
             >
-              Simpan
+              {submitting
+                ? "Menyimpan..."
+                : "Simpan"}
             </button>
           </form>
         </Modal>
@@ -694,9 +763,7 @@ export default function ProductPage() {
         <Modal maxWidth="max-w-2xl">
           <form
             onSubmit={
-              editingProduct
-                ? handleUpdateProduct
-                : handleCreateProduct
+              handleSubmitProduct
             }
             className="space-y-4"
           >
@@ -727,7 +794,8 @@ export default function ProductPage() {
                   src={imagePreview}
                   alt="Preview"
                   fill
-                  sizes="100vw"
+                  loading="lazy"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover"
                 />
               ) : (
@@ -995,7 +1063,7 @@ function Input({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className="h-11 border border-slate-300 rounded-2xl px-4 outline-none"
+      className="w-full h-11 border border-slate-300 rounded-2xl px-4 outline-none"
     />
   );
 }
