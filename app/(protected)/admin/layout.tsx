@@ -4,31 +4,24 @@ import React, { useState } from "react";
 
 import Link from "next/link";
 
+import { usePathname } from "next/navigation";
+
 import {
+  BarChart3,
   LayoutDashboard,
-  Store,
-  ShoppingBag,
-  Receipt,
-  Wallet,
-  FileText,
-  Users,
-  Settings,
   LogOut,
+  Package,
   PanelLeftClose,
   PanelLeftOpen,
-  Tag,
   ShoppingCart,
-  Package,
   User,
-  BarChart3,
+  Wallet,
 } from "lucide-react";
-
-import { usePathname } from "next/navigation";
 
 const menus = [
   {
     label: "Dashboard",
-    href: "/admin/",
+    href: "/admin",
     icon: LayoutDashboard,
   },
 
@@ -45,14 +38,14 @@ const menus = [
   },
 
   {
-    label: "Expenses",
-    href: "/admin/expenses",
+    label: "Operasional",
+    href: "/admin/operasional",
     icon: Wallet,
   },
 
   {
-    label: "Reports",
-    href: "/admin/reports",
+    label: "Laporan",
+    href: "/admin/laporan",
     icon: BarChart3,
   },
 
@@ -73,94 +66,114 @@ export default function AdminLayout({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FFF5F7] flex text-[#4A1D24]">
+    <div className="min-h-screen bg-slate-50 flex">
       <aside
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-pink-100 z-50 transition-all duration-300 flex flex-col justify-between ${
-          collapsed ? "w-24 p-4" : "w-72 p-6"
+        className={`fixed top-0 left-0 h-screen bg-white border-r border-slate-200 flex flex-col z-50 transition-all duration-300 ${
+          collapsed ? "w-20" : "w-64"
         }`}
       >
-        <div>
-          <div
-            className={`flex items-center ${
-              collapsed ? "justify-center" : "justify-between"
-            } mb-10`}
-          >
-            {!collapsed && (
-              <div className="flex items-center gap-3">
-                <img
-                  src="/laila.jpg"
-                  alt="Logo"
-                  className="w-11 h-11 rounded-2xl object-cover shadow-sm border border-pink-100 flex-shrink-0"
-                />
+        <div className="h-20 border-b border-slate-200 px-5 flex items-center justify-between">
+          {!collapsed && (
+            <div className="flex items-center gap-3">
+              <img
+                src="/laila.jpg"
+                alt="Logo"
+                className="w-11 h-11 rounded-2xl object-cover"
+              />
 
-                <div>
-                  <h1 className="font-black text-lg leading-none text-pink-950">
-                    Laila Collection
-                  </h1>
+              <div>
+                <h1 className="text-sm font-semibold text-slate-800">
+                  Laila Collection
+                </h1>
 
-                  <p className="text-xs text-pink-400 uppercase tracking-widest mt-1 font-bold">
-                    Admin Official
-                  </p>
-                </div>
+                <p className="text-xs text-slate-400">Admin Panel</p>
               </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-slate-600" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 text-slate-600" />
             )}
+          </button>
+        </div>
 
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="w-11 h-11 rounded-2xl bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-all text-pink-500"
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="w-5 h-5" />
-              ) : (
-                <PanelLeftClose className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-
-          <nav className="space-y-2">
+        <div className="flex-1 overflow-y-auto px-3 py-5">
+          <div className="space-y-1">
             {menus.map((item) => {
-              const isActive = pathname === item.href;
+              const active = pathname === item.href;
 
               return (
                 <Link key={item.label} href={item.href}>
-                  <button
-                    className={`w-full flex items-center ${
-                      collapsed ? "justify-center" : "justify-start"
-                    } gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all ${
-                      isActive
-                        ? "bg-pink-600 text-white shadow-lg shadow-pink-200"
-                        : "hover:bg-pink-50 hover:text-pink-600 text-[#4A1D24]/70"
+                  <div
+                    className={`w-full flex items-center px-4 py-3 rounded-2xl text-sm transition cursor-pointer ${
+                      collapsed ? "justify-center" : "gap-3"
+                    } ${
+                      active
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
 
-                    {!collapsed && <span>{item.label}</span>}
-                  </button>
+                    {!collapsed && (
+                      <span className="font-medium">{item.label}</span>
+                    )}
+                  </div>
                 </Link>
               );
             })}
-          </nav>
+          </div>
         </div>
 
-        <Link href="/Login">
-          <button
-            className={`w-full rounded-2xl py-4 flex items-center ${
-              collapsed ? "justify-center" : "justify-center gap-3"
-            } font-bold transition-all bg-pink-50 hover:bg-pink-100 text-pink-600`}
-          >
-            <LogOut className="w-5 h-5" />
+        <div className="p-3 border-t border-slate-200">
+          <Link href="/Login">
+            <button
+              className={`w-full flex items-center px-4 py-3 rounded-2xl text-sm font-medium text-red-500 hover:bg-red-50 transition ${
+                collapsed ? "justify-center" : "gap-3"
+              }`}
+            >
+              <LogOut className="w-5 h-5" />
 
-            {!collapsed && <span>Logout</span>}
-          </button>
-        </Link>
+              {!collapsed && <span>Logout</span>}
+            </button>
+          </Link>
+        </div>
       </aside>
 
       <main
         className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-24" : "ml-72"
+          collapsed ? "ml-20" : "ml-64"
         }`}
       >
-        {children}
+        <div className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Dashboard</h2>
+
+            <p className="text-sm text-slate-500">Welcome back 👋</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end">
+              <h4 className="text-sm font-medium text-slate-700">Admin</h4>
+
+              <p className="text-xs text-slate-400">Active Session</p>
+            </div>
+
+            <img
+              src="/laila.jpg"
+              alt="Profile"
+              className="w-11 h-11 rounded-full object-cover"
+            />
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6">{children}</div>
       </main>
     </div>
   );
