@@ -3,18 +3,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
-  Store,
+  Users,
   Plus,
   Search,
-  MapPin,
-  Phone,
-  MoreHorizontal,
-  Users,
+  Mail,
+  Store,
   Loader2,
   Edit,
   Trash2,
   X,
-  ImagePlus,
+  Eye,
+  EyeOff,
+  Lock,
 } from "lucide-react";
 
 import api from "@/lib/api";
@@ -22,78 +22,105 @@ import api from "@/lib/api";
 type Outlet = {
   id: string;
   name: string;
-  address?: string;
-  noTelp?: string;
-  qrisImage?: string;
-  users?: any[];
 };
 
-export default function OutletsPage() {
-  const [search, setSearch] = useState("");
+type Admin = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  outlet?: {
+    id: string;
+    name: string;
+  };
+};
+
+export default function AdminsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
 
+  const [admins, setAdmins] = useState<Admin[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
 
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
 
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [selectedAdminId, setSelectedAdminId] =
+    useState<string | null>(null);
 
-  const [selectedOutletId, setSelectedOutletId] = useState<
-    string | null
-  >(null);
+  const [showCreatePassword, setShowCreatePassword] =
+    useState(false);
 
-  const [qrisImage, setQrisImage] = useState<File | null>(null);
-
-  const [editQrisImage, setEditQrisImage] =
-    useState<File | null>(null);
+  const [showEditPassword, setShowEditPassword] =
+    useState(false);
 
   const [form, setForm] = useState({
     name: "",
-    address: "",
-    noTelp: "",
+    email: "",
+    password: "",
+    outletId: "",
   });
 
   const [editForm, setEditForm] = useState({
     name: "",
-    address: "",
-    noTelp: "",
+    email: "",
+    password: "",
+    outletId: "",
   });
 
   useEffect(() => {
-    fetchOutlets();
+    fetchData();
   }, []);
 
-  const fetchOutlets = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const response = await api.get("/outlets");
+      const [adminsResponse, outletsResponse] =
+        await Promise.all([
+          api.get("/users/karyawan"),
+          api.get("/outlets"),
+        ]);
 
-      setOutlets(response.data);
+      setAdmins(adminsResponse.data || []);
+      setOutlets(outletsResponse.data || []);
     } catch (error: any) {
       console.error(error);
 
       setError(
         error?.response?.data?.message ||
-          "Gagal mengambil data outlet"
+          "Gagal mengambil data"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredOutlets = useMemo(() => {
-    return outlets.filter((outlet) =>
-      outlet.name
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [outlets, search]);
+  const filteredAdmins = useMemo(() => {
+    return admins.filter((admin) => {
+      const keyword = search.toLowerCase();
 
-  const handleCreateOutlet = async (
+      return (
+        admin.name.toLowerCase().includes(keyword) ||
+        admin.email.toLowerCase().includes(keyword)
+      );
+    });
+  }, [admins, search]);
+
+  const resetCreateForm = () => {
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      outletId: "",
+    });
+  };
+
+  const handleCreateAdmin = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
@@ -101,117 +128,98 @@ export default function OutletsPage() {
     try {
       setSubmitting(true);
 
-      const formData = new FormData();
-
-      formData.append("name", form.name);
-      formData.append("address", form.address);
-      formData.append("noTelp", form.noTelp);
-
-      if (qrisImage) {
-        formData.append("qrisImage", qrisImage);
-      }
-
-      await api.post("/outlets", formData);
+      await api.post("/auth/create-admin", form);
 
       setOpenCreate(false);
 
-      setForm({
-        name: "",
-        address: "",
-        noTelp: "",
-      });
+      resetCreateForm();
 
-      setQrisImage(null);
-
-      fetchOutlets();
+      fetchData();
     } catch (error: any) {
       console.error(error);
 
       alert(
         error?.response?.data?.message ||
-          "Gagal menambah outlet"
+          "Gagal menambah admin"
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleOpenEditModal = (outlet: Outlet) => {
-    setSelectedOutletId(outlet.id);
+  const handleOpenEditModal = (admin: Admin) => {
+    setSelectedAdminId(admin.id);
 
     setEditForm({
-      name: outlet.name,
-      address: outlet.address || "",
-      noTelp: outlet.noTelp || "",
+      name: admin.name,
+      email: admin.email,
+      password: "",
+      outletId: admin.outlet?.id || "",
     });
 
-    setEditQrisImage(null);
-
     setOpenEdit(true);
-
-    setActiveDropdown(null);
   };
 
-  const handleEditOutlet = async (
+  const handleEditAdmin = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
-    if (!selectedOutletId) return;
+    if (!selectedAdminId) return;
 
     try {
       setSubmitting(true);
 
-      const formData = new FormData();
+      const payload: any = {
+        name: editForm.name,
+        email: editForm.email,
+        outletId: editForm.outletId,
+      };
 
-      formData.append("name", editForm.name);
-      formData.append("address", editForm.address);
-      formData.append("noTelp", editForm.noTelp);
-
-      if (editQrisImage) {
-        formData.append("qrisImage", editQrisImage);
+      if (editForm.password.trim()) {
+        payload.password = editForm.password;
       }
 
       await api.patch(
-        `/outlets/${selectedOutletId}`,
-        formData
+        `/users/${selectedAdminId}`,
+        payload
       );
 
       setOpenEdit(false);
 
-      fetchOutlets();
+      fetchData();
     } catch (error: any) {
       console.error(error);
 
       alert(
         error?.response?.data?.message ||
-          "Gagal update outlet"
+          "Gagal update admin"
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteOutlet = async (
+  const handleDeleteAdmin = async (
     id: string,
     name: string
   ) => {
-    const confirmDelete = confirm(
-      `Hapus outlet ${name}?`
+    const confirmed = confirm(
+      `Hapus admin ${name}?`
     );
 
-    if (!confirmDelete) return;
+    if (!confirmed) return;
 
     try {
-      await api.delete(`/outlets/${id}`);
+      await api.delete(`/users/${id}`);
 
-      fetchOutlets();
+      fetchData();
     } catch (error: any) {
       console.error(error);
 
       alert(
         error?.response?.data?.message ||
-          "Gagal menghapus outlet"
+          "Gagal menghapus admin"
       );
     }
   };
@@ -222,11 +230,11 @@ export default function OutletsPage() {
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">
-            Outlet
+            Karyawan
           </h1>
 
           <p className="text-sm text-slate-500 mt-1">
-            Kelola seluruh data outlet
+            Kelola akun admin dan kasir
           </p>
         </div>
 
@@ -235,12 +243,30 @@ export default function OutletsPage() {
           className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition"
         >
           <Plus className="w-4 h-4" />
-          Tambah Outlet
+          Tambah Admin
         </button>
       </div>
 
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+        <div className="bg-white border border-slate-200 rounded-xl p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">
+                Total Admin
+              </p>
+
+              <h2 className="text-2xl font-semibold text-slate-800 mt-1">
+                {admins.length}
+              </h2>
+            </div>
+
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+              <Users className="w-5 h-5 text-slate-600" />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white border border-slate-200 rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -263,38 +289,16 @@ export default function OutletsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">
-                Total Admin
+                Admin Aktif
               </p>
 
               <h2 className="text-2xl font-semibold text-slate-800 mt-1">
-                {outlets.reduce(
-                  (acc, outlet) =>
-                    acc + (outlet.users?.length || 0),
-                  0
-                )}
-              </h2>
-            </div>
-
-            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-              <Users className="w-5 h-5 text-slate-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">
-                Outlet Aktif
-              </p>
-
-              <h2 className="text-2xl font-semibold text-slate-800 mt-1">
-                {outlets.length}
+                {admins.length}
               </h2>
             </div>
 
             <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Store className="w-5 h-5 text-green-600" />
+              <Users className="w-5 h-5 text-green-600" />
             </div>
           </div>
         </div>
@@ -307,9 +311,11 @@ export default function OutletsPage() {
 
           <input
             type="text"
-            placeholder="Cari outlet..."
+            placeholder="Cari nama atau email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
             className="w-full h-11 bg-white border border-slate-300 rounded-lg pl-10 pr-4 text-sm outline-none focus:border-slate-400"
           />
         </div>
@@ -328,9 +334,9 @@ export default function OutletsPage() {
           <div className="h-[300px] flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
           </div>
-        ) : filteredOutlets.length === 0 ? (
+        ) : filteredAdmins.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center text-sm text-slate-500">
-            Tidak ada outlet
+            Tidak ada admin
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -338,19 +344,19 @@ export default function OutletsPage() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
+                    Nama
+                  </th>
+
+                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
+                    Email
+                  </th>
+
+                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
+                    Role
+                  </th>
+
+                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
                     Outlet
-                  </th>
-
-                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
-                    Alamat
-                  </th>
-
-                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
-                    Telepon
-                  </th>
-
-                  <th className="text-left px-5 py-4 text-sm font-medium text-slate-600">
-                    Admin
                   </th>
 
                   <th className="text-right px-5 py-4 text-sm font-medium text-slate-600">
@@ -360,54 +366,46 @@ export default function OutletsPage() {
               </thead>
 
               <tbody>
-                {filteredOutlets.map((outlet) => (
+                {filteredAdmins.map((admin) => (
                   <tr
-                    key={outlet.id}
+                    key={admin.id}
                     className="border-b border-slate-100 hover:bg-slate-50"
                   >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Store className="w-5 h-5 text-slate-600" />
+                          <Users className="w-5 h-5 text-slate-600" />
                         </div>
 
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-800">
-                            {outlet.name}
-                          </h3>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-slate-500">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 mt-0.5" />
-
-                        <span>
-                          {outlet.address || "-"}
-                        </span>
+                        <h3 className="text-sm font-medium text-slate-800">
+                          {admin.name}
+                        </h3>
                       </div>
                     </td>
 
                     <td className="px-5 py-4 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4" />
+                        <Mail className="w-4 h-4" />
 
-                        <span>
-                          {outlet.noTelp || "-"}
-                        </span>
+                        <span>{admin.email}</span>
                       </div>
                     </td>
 
+                    <td className="px-5 py-4">
+                      <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">
+                        {admin.role}
+                      </span>
+                    </td>
+
                     <td className="px-5 py-4 text-sm text-slate-500">
-                      {outlet.users?.length || 0}
+                      {admin.outlet?.name || "-"}
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() =>
-                            handleOpenEditModal(outlet)
+                            handleOpenEditModal(admin)
                           }
                           className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center"
                         >
@@ -416,9 +414,9 @@ export default function OutletsPage() {
 
                         <button
                           onClick={() =>
-                            handleDeleteOutlet(
-                              outlet.id,
-                              outlet.name
+                            handleDeleteAdmin(
+                              admin.id,
+                              admin.name
                             )
                           }
                           className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-red-50 flex items-center justify-center"
@@ -442,11 +440,11 @@ export default function OutletsPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-slate-800">
-                  Tambah Outlet
+                  Tambah Admin
                 </h2>
 
                 <p className="text-sm text-slate-500 mt-1">
-                  Tambahkan data outlet baru
+                  Tambahkan akun admin baru
                 </p>
               </div>
 
@@ -459,12 +457,12 @@ export default function OutletsPage() {
             </div>
 
             <form
-              onSubmit={handleCreateOutlet}
+              onSubmit={handleCreateAdmin}
               className="space-y-4"
             >
               <div>
                 <label className="text-sm text-slate-600">
-                  Nama Outlet
+                  Nama
                 </label>
 
                 <input
@@ -483,33 +481,17 @@ export default function OutletsPage() {
 
               <div>
                 <label className="text-sm text-slate-600">
-                  Alamat
-                </label>
-
-                <textarea
-                  value={form.address}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      address: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 mt-1 outline-none focus:border-slate-400 min-h-[100px]"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-slate-600">
-                  No Telepon
+                  Email
                 </label>
 
                 <input
-                  type="text"
-                  value={form.noTelp}
+                  type="email"
+                  required
+                  value={form.email}
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      noTelp: e.target.value,
+                      email: e.target.value,
                     })
                   }
                   className="w-full h-11 border border-slate-300 rounded-lg px-4 mt-1 outline-none focus:border-slate-400"
@@ -518,27 +500,76 @@ export default function OutletsPage() {
 
               <div>
                 <label className="text-sm text-slate-600">
-                  QRIS
+                  Password
                 </label>
 
-                <label className="mt-1 border border-dashed border-slate-300 rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50">
-                  <ImagePlus className="w-6 h-6 text-slate-400" />
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    Upload gambar
-                  </p>
+                <div className="relative mt-1">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
 
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
+                    type={
+                      showCreatePassword
+                        ? "text"
+                        : "password"
+                    }
+                    required
+                    value={form.password}
                     onChange={(e) =>
-                      setQrisImage(
-                        e.target.files?.[0] || null
+                      setForm({
+                        ...form,
+                        password: e.target.value,
+                      })
+                    }
+                    className="w-full h-11 border border-slate-300 rounded-lg pl-10 pr-10 outline-none focus:border-slate-400"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowCreatePassword(
+                        !showCreatePassword
                       )
                     }
-                  />
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showCreatePassword ? (
+                      <EyeOff className="w-4 h-4 text-slate-500" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-600">
+                  Outlet
                 </label>
+
+                <select
+                  required
+                  value={form.outletId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      outletId: e.target.value,
+                    })
+                  }
+                  className="w-full h-11 border border-slate-300 rounded-lg px-4 mt-1 outline-none focus:border-slate-400"
+                >
+                  <option value="">
+                    Pilih Outlet
+                  </option>
+
+                  {outlets.map((outlet) => (
+                    <option
+                      key={outlet.id}
+                      value={outlet.id}
+                    >
+                      {outlet.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button
@@ -548,7 +579,7 @@ export default function OutletsPage() {
               >
                 {submitting
                   ? "Menyimpan..."
-                  : "Simpan Outlet"}
+                  : "Simpan Admin"}
               </button>
             </form>
           </div>
@@ -562,11 +593,11 @@ export default function OutletsPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-slate-800">
-                  Edit Outlet
+                  Edit Admin
                 </h2>
 
                 <p className="text-sm text-slate-500 mt-1">
-                  Ubah data outlet
+                  Ubah data admin
                 </p>
               </div>
 
@@ -579,12 +610,12 @@ export default function OutletsPage() {
             </div>
 
             <form
-              onSubmit={handleEditOutlet}
+              onSubmit={handleEditAdmin}
               className="space-y-4"
             >
               <div>
                 <label className="text-sm text-slate-600">
-                  Nama Outlet
+                  Nama
                 </label>
 
                 <input
@@ -603,33 +634,17 @@ export default function OutletsPage() {
 
               <div>
                 <label className="text-sm text-slate-600">
-                  Alamat
-                </label>
-
-                <textarea
-                  value={editForm.address}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      address: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 mt-1 outline-none focus:border-slate-400 min-h-[100px]"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-slate-600">
-                  No Telepon
+                  Email
                 </label>
 
                 <input
-                  type="text"
-                  value={editForm.noTelp}
+                  type="email"
+                  required
+                  value={editForm.email}
                   onChange={(e) =>
                     setEditForm({
                       ...editForm,
-                      noTelp: e.target.value,
+                      email: e.target.value,
                     })
                   }
                   className="w-full h-11 border border-slate-300 rounded-lg px-4 mt-1 outline-none focus:border-slate-400"
@@ -638,27 +653,75 @@ export default function OutletsPage() {
 
               <div>
                 <label className="text-sm text-slate-600">
-                  Ganti QRIS
+                  Password Baru
                 </label>
 
-                <label className="mt-1 border border-dashed border-slate-300 rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50">
-                  <ImagePlus className="w-6 h-6 text-slate-400" />
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    Upload gambar baru
-                  </p>
+                <div className="relative mt-1">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
 
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
+                    type={
+                      showEditPassword
+                        ? "text"
+                        : "password"
+                    }
+                    value={editForm.password}
                     onChange={(e) =>
-                      setEditQrisImage(
-                        e.target.files?.[0] || null
+                      setEditForm({
+                        ...editForm,
+                        password: e.target.value,
+                      })
+                    }
+                    className="w-full h-11 border border-slate-300 rounded-lg pl-10 pr-10 outline-none focus:border-slate-400"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowEditPassword(
+                        !showEditPassword
                       )
                     }
-                  />
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    {showEditPassword ? (
+                      <EyeOff className="w-4 h-4 text-slate-500" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-600">
+                  Outlet
                 </label>
+
+                <select
+                  required
+                  value={editForm.outletId}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      outletId: e.target.value,
+                    })
+                  }
+                  className="w-full h-11 border border-slate-300 rounded-lg px-4 mt-1 outline-none focus:border-slate-400"
+                >
+                  <option value="">
+                    Pilih Outlet
+                  </option>
+
+                  {outlets.map((outlet) => (
+                    <option
+                      key={outlet.id}
+                      value={outlet.id}
+                    >
+                      {outlet.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button
@@ -668,7 +731,7 @@ export default function OutletsPage() {
               >
                 {submitting
                   ? "Menyimpan..."
-                  : "Update Outlet"}
+                  : "Update Admin"}
               </button>
             </form>
           </div>

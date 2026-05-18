@@ -8,11 +8,9 @@ import {
   LayoutDashboard,
   Store,
   ShoppingBag,
-  Receipt,
   Wallet,
   FileText,
   Users,
-  Settings,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -33,14 +31,9 @@ const menus = [
     href: "/super-admin/outlets",
   },
   {
-    label: "Admins",
+    label: "Karyawan",
     icon: Users,
-    href: "/super-admin/admins",
-  },
-  {
-    label: "Categories",
-    icon: Tag,
-    href: "/super-admin/categories",
+    href: "/super-admin/karyawan",
   },
   {
     label: "Products",
@@ -53,7 +46,7 @@ const menus = [
     href: "/super-admin/expenses",
   },
   {
-    label: "Laporan",
+    label: "Reports",
     icon: FileText,
     href: "/super-admin/reports",
   },
@@ -69,94 +62,133 @@ export default function SuperAdminLayout({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FFF5F7] flex text-[#4A1D24]">
+    <div className="min-h-screen bg-[#f5f6fa] flex">
+      {/* SIDEBAR */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-pink-100 z-50 transition-all duration-300 flex flex-col justify-between ${
-          collapsed ? "w-24 p-4" : "w-72 p-6"
+        className={`fixed left-0 top-0 h-screen bg-white border-r border-slate-200 transition-all duration-300 z-50 flex flex-col ${
+          collapsed ? "w-20" : "w-64"
         }`}
       >
-        <div>
-          <div
-            className={`flex items-center ${
-              collapsed ? "justify-center" : "justify-between"
-            } mb-10`}
-          >
-            {!collapsed && (
-              <div className="flex items-center gap-3">
-                <img
-                  src="/laila.jpg"
-                  alt="Logo"
-                  className="w-11 h-11 rounded-2xl object-cover shadow-sm border border-pink-100 flex-shrink-0"
-                />
+        {/* HEADER */}
+        <div className="h-20 border-b border-slate-200 flex items-center justify-between px-5">
+          {!collapsed && (
+            <div className="flex items-center gap-3">
+              <img
+                src="/laila.jpg"
+                alt="Logo"
+                className="w-10 h-10 rounded-xl object-cover"
+              />
 
-                <div>
-                  <h1 className="font-black text-lg leading-none text-pink-950">
-                    Laila Collection
-                  </h1>
+              <div>
+                <h1 className="text-sm font-semibold text-slate-800">
+                  Laila Collection
+                </h1>
 
-                  <p className="text-xs text-pink-400 uppercase tracking-widest mt-1 font-bold">
-                    Super Admin
-                  </p>
-                </div>
+                <p className="text-xs text-slate-400">
+                  Super Admin
+                </p>
               </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-slate-600" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 text-slate-600" />
             )}
-
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="w-11 h-11 rounded-2xl bg-pink-50 hover:bg-pink-100 flex items-center justify-center transition-all text-pink-500"
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="w-5 h-5" />
-              ) : (
-                <PanelLeftClose className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-
-          <nav className="space-y-2">
-            {menus.map((item) => {
-              const isActive = pathname === item.href;
-
-              return (
-                <Link key={item.label} href={item.href}>
-                  <button
-                    className={`w-full flex items-center ${
-                      collapsed ? "justify-center" : "justify-start"
-                    } gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all ${
-                      isActive
-                        ? "bg-pink-600 text-white shadow-lg shadow-pink-200"
-                        : "hover:bg-pink-50 hover:text-pink-600 text-[#4A1D24]/70"
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-
-                    {!collapsed && <span>{item.label}</span>}
-                  </button>
-                </Link>
-              );
-            })}
-          </nav>
+          </button>
         </div>
 
-        <Link href="/Login">
-          <button
-            className={`w-full rounded-2xl py-4 flex items-center ${
-              collapsed ? "justify-center" : "justify-center gap-3"
-            } font-bold transition-all bg-pink-50 hover:bg-pink-100 text-pink-600`}
-          >
-            <LogOut className="w-5 h-5" />
+        {/* MENU */}
+        <div className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+          {menus.map((item) => {
+            const isActive = pathname === item.href;
 
-            {!collapsed && <span>Logout</span>}
-          </button>
-        </Link>
+            return (
+              <Link key={item.label} href={item.href}>
+                <button
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
+                    collapsed
+                      ? "justify-center"
+                      : "justify-start"
+                  } ${
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+
+                  {!collapsed && (
+                    <span className="font-medium">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* FOOTER */}
+        <div className="p-3 border-t border-slate-200">
+          <Link href="/login">
+            <button
+              className={`w-full flex items-center rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 transition-all ${
+                collapsed
+                  ? "justify-center"
+                  : "justify-start gap-3"
+              }`}
+            >
+              <LogOut className="w-5 h-5" />
+
+              {!collapsed && <span>Logout</span>}
+            </button>
+          </Link>
+        </div>
       </aside>
 
+      {/* CONTENT */}
       <main
         className={`flex-1 transition-all duration-300 ${
-          collapsed ? "ml-24" : "ml-72"
+          collapsed ? "ml-20" : "ml-64"
         }`}
       >
-        {children}
+        {/* TOPBAR */}
+        <div className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">
+              Dashboard
+            </h2>
+
+            <p className="text-sm text-slate-500">
+              Welcome back 👋
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end">
+              <h4 className="text-sm font-medium text-slate-700">
+                Super Admin
+              </h4>
+
+              <p className="text-xs text-slate-400">
+                Active Session
+              </p>
+            </div>
+
+            <div className="w-11 h-11 rounded-full bg-slate-200" />
+          </div>
+        </div>
+
+        {/* PAGE */}
+        <div className="p-4 md:p-6">
+          {children}
+        </div>
       </main>
     </div>
   );
