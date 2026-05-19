@@ -19,20 +19,37 @@ import api from "@/lib/api";
 
 type Sale = {
   id: string;
+
   invoiceNumber: string;
+
   totalAmount: number;
+
   totalProfit: number;
+
   createdAt: string;
 
   outlet?: {
     name: string;
   };
+
+  items?: {
+    id: string;
+
+    quantity: number;
+
+    product: {
+      name: string;
+    };
+  }[];
 };
 
 type Product = {
   id: string;
+
   name: string;
+
   stock: number;
+
   minStock: number;
 };
 
@@ -45,8 +62,11 @@ export default function AdminDashboardPage() {
 
   const [summary, setSummary] = useState({
     totalSales: 0,
+
     totalProfit: 0,
+
     totalTransactions: 0,
+
     totalProducts: 0,
   });
 
@@ -56,6 +76,7 @@ export default function AdminDashboardPage() {
 
       const [salesResponse, productsResponse] = await Promise.all([
         api.get("/reports/sales"),
+
         api.get("/products"),
       ]);
 
@@ -159,7 +180,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-semibold text-slate-800">
-                  Recent Transactions
+                  Riwayat Transactions
                 </h2>
 
                 <p className="text-sm text-slate-400 mt-1">Transaksi terbaru</p>
@@ -187,8 +208,15 @@ export default function AdminDashboardPage() {
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-slate-800">
-                          {sale.invoiceNumber}
+                        <h3 className="font-semibold text-slate-800 max-w-[300px] truncate">
+                          {sale.items && sale.items.length > 0
+                            ? sale.items
+                                .map(
+                                  (item) =>
+                                    `${item.product.name} (${item.quantity})`,
+                                )
+                                .join(", ")
+                            : sale.invoiceNumber}
                         </h3>
 
                         <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
@@ -297,7 +325,9 @@ function Card({
   icon,
 }: {
   title: string;
+
   value: string;
+
   icon: React.ReactNode;
 }) {
   return (

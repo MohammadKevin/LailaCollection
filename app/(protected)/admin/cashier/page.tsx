@@ -1,11 +1,6 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import Image from "next/image";
 
@@ -15,6 +10,7 @@ import {
   Loader2,
   Minus,
   Package,
+  Percent,
   Plus,
   QrCode,
   Receipt,
@@ -27,11 +23,7 @@ import {
 
 import api from "@/lib/api";
 
-type PaymentMethod =
-  | "CASH"
-  | "QRIS"
-  | "DEBIT"
-  | "TRANSFER";
+type PaymentMethod = "CASH" | "QRIS" | "DEBIT" | "TRANSFER";
 
 interface Category {
   id: string;
@@ -55,29 +47,26 @@ interface CartItem {
   imageUrl?: string;
 }
 
-function formatRupiah(
-  amount: number,
-) {
-  return `Rp ${amount.toLocaleString(
-    "id-ID",
-  )}`;
+interface Discount {
+  id: string;
+  name: string;
+  type: "PERCENTAGE" | "FIXED";
+  value: number;
+}
+
+function formatRupiah(amount: number) {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
 function getOutletId() {
   try {
-    const raw =
-      localStorage.getItem(
-        "user",
-      );
+    const raw = localStorage.getItem("user");
 
     if (!raw) return "";
 
-    const user =
-      JSON.parse(raw);
+    const user = JSON.parse(raw);
 
-    return (
-      user?.outlet?.id || ""
-    );
+    return user?.outlet?.id || "";
   } catch {
     return "";
   }
@@ -110,298 +99,222 @@ const PAYMENT_METHODS = [
 ] as const;
 
 export default function SalesPage() {
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [submitting, setSubmitting] =
-    useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [search, setSearch] =
-    useState("");
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
 
-  const [cart, setCart] =
-    useState<CartItem[]>([]);
+  const [search, setSearch] = useState("");
 
-  const [
-    paymentMethod,
-    setPaymentMethod,
-  ] =
-    useState<PaymentMethod>(
-      "CASH",
-    );
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  const [paidAmount, setPaidAmount] =
-    useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
 
-  const [outletId, setOutletId] =
-    useState("");
+  const [paidAmount, setPaidAmount] = useState("");
 
-  const [openCategory, setOpenCategory] =
-    useState<string | null>(null);
+  const [outletId, setOutletId] = useState("");
 
-  const fetchProducts =
-    useCallback(async () => {
-      try {
-        setLoading(true);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
-        const response =
-          await api.get(
-            "/products",
-          );
+  const [selectedDiscountId, setSelectedDiscountId] = useState("");
 
-        setProducts(
-          response.data || [],
-        );
+  const [discountData, setDiscountData] = useState<Discount | null>(null);
 
-        setOutletId(
-          getOutletId(),
-        );
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const [productsResponse, discountsResponse] = await Promise.all([
+        api.get("/products"),
+
+        api.get("/discounts/active"),
+      ]);
+
+      setProducts(productsResponse.data || []);
+
+      setDiscounts(discountsResponse.data || []);
+
+      setOutletId(getOutletId());
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, [fetchProducts]);
 
-  const categories =
-    useMemo(() => {
-      const names =
-        products
-          .map(
-            (p) =>
-              p.category
-                ?.name,
-          )
-          .filter(
-            Boolean,
-          ) as string[];
+  const categories = useMemo(() => {
+    const names = products
+      .map((p) => p.category?.name)
+      .filter(Boolean) as string[];
 
-      return [
-        ...new Set(names),
-      ];
-    }, [products]);
+    return [...new Set(names)];
+  }, [products]);
 
-  const total =
-    useMemo(() => {
-      return cart.reduce(
-        (acc, item) =>
-          acc +
-          item.price *
-            item.quantity,
-        0,
-      );
-    }, [cart]);
+  const subtotal = useMemo(() => {
+    return cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }, [cart]);
 
-  const change =
-    Number(paidAmount) >
-    total
-      ? Number(
-          paidAmount,
-        ) - total
-      : 0;
+  const total = subtotal - discountAmount;
 
-  const addToCart = (
-    product: Product,
-  ) => {
-    if (
-      product.stock <= 0
-    ) {
-      alert(
-        "Stock habis",
-      );
+  const change = Number(paidAmount) > total ? Number(paidAmount) - total : 0;
+
+  const addToCart = (product: Product) => {
+    if (product.stock <= 0) {
+      alert("Stock habis");
 
       return;
     }
 
     setCart((prev) => {
-      const existing =
-        prev.find(
-          (item) =>
-            item.productId ===
-            product.id,
-        );
+      const existing = prev.find((item) => item.productId === product.id);
 
       if (existing) {
-        return prev.map(
-          (item) =>
-            item.productId ===
-            product.id
-              ? {
-                  ...item,
-                  quantity:
-                    item.quantity +
-                    1,
-                }
-              : item,
+        return prev.map((item) =>
+          item.productId === product.id
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+              }
+            : item,
         );
       }
 
       return [
         ...prev,
         {
-          productId:
-            product.id,
+          productId: product.id,
           name: product.name,
-          price:
-            product.sellingPrice,
+          price: product.sellingPrice,
           quantity: 1,
-          imageUrl:
-            product.imageUrl,
+          imageUrl: product.imageUrl,
         },
       ];
     });
   };
 
-  const increaseQty = (
-    id: string,
-  ) => {
+  const increaseQty = (id: string) => {
     setCart((prev) =>
       prev.map((item) =>
-        item.productId ===
-        id
+        item.productId === id
           ? {
               ...item,
-              quantity:
-                item.quantity +
-                1,
+              quantity: item.quantity + 1,
             }
           : item,
       ),
     );
   };
 
-  const decreaseQty = (
-    id: string,
-  ) => {
+  const decreaseQty = (id: string) => {
     setCart((prev) =>
       prev
         .map((item) =>
-          item.productId ===
-          id
+          item.productId === id
             ? {
                 ...item,
-                quantity:
-                  item.quantity -
-                  1,
+                quantity: item.quantity - 1,
               }
             : item,
         )
-        .filter(
-          (item) =>
-            item.quantity >
-            0,
-        ),
+        .filter((item) => item.quantity > 0),
     );
   };
 
-  const removeItem = (
-    id: string,
-  ) => {
-    setCart((prev) =>
-      prev.filter(
-        (item) =>
-          item.productId !==
-          id,
-      ),
-    );
+  const removeItem = (id: string) => {
+    setCart((prev) => prev.filter((item) => item.productId !== id));
   };
 
-  const handleCheckout =
-    async () => {
-      try {
-        if (
-          cart.length ===
-          0
-        ) {
-          alert(
-            "Keranjang kosong",
-          );
+  const handleSelectDiscount = (id: string) => {
+    setSelectedDiscountId(id);
 
-          return;
-        }
+    const discount = discounts.find((d) => d.id === id);
 
-        if (
-          paymentMethod ===
-            "CASH" &&
-          Number(
-            paidAmount,
-          ) < total
-        ) {
-          alert(
-            "Pembayaran kurang",
-          );
+    if (!discount) {
+      setDiscountData(null);
 
-          return;
-        }
+      setDiscountAmount(0);
 
-        setSubmitting(
-          true,
-        );
+      return;
+    }
 
-        await api.post(
-          "/sales",
-          {
-            paymentMethod,
+    setDiscountData(discount);
 
-            paidAmount:
-              paymentMethod ===
-              "CASH"
-                ? Number(
-                    paidAmount,
-                  )
-                : total,
+    let amount = 0;
 
-            paymentProof:
-              null,
+    if (discount.type === "PERCENTAGE") {
+      amount = (subtotal * discount.value) / 100;
+    } else {
+      amount = discount.value;
+    }
 
-            outletId,
+    setDiscountAmount(amount);
+  };
 
-            items:
-              cart.map(
-                (
-                  item,
-                ) => ({
-                  productId:
-                    item.productId,
+  const handleCheckout = async () => {
+    try {
+      if (cart.length === 0) {
+        alert("Keranjang kosong");
 
-                  quantity:
-                    item.quantity,
-                }),
-              ),
-          },
-        );
-
-        alert(
-          "Transaksi berhasil",
-        );
-
-        setCart([]);
-
-        setPaidAmount(
-          "",
-        );
-
-        fetchProducts();
-      } catch (error) {
-        console.error(error);
-
-        alert(
-          "Checkout gagal",
-        );
-      } finally {
-        setSubmitting(
-          false,
-        );
+        return;
       }
-    };
+
+      if (paymentMethod === "CASH" && Number(paidAmount) < total) {
+        alert("Pembayaran kurang");
+
+        return;
+      }
+
+      setSubmitting(true);
+
+      await api.post("/sales", {
+        paymentMethod,
+
+        discountId: selectedDiscountId || null,
+
+        paidAmount: paymentMethod === "CASH" ? Number(paidAmount) : total,
+
+        paymentProof: null,
+
+        outletId,
+
+        items: cart.map((item) => ({
+          productId: item.productId,
+
+          quantity: item.quantity,
+        })),
+      });
+
+      alert("Transaksi berhasil");
+
+      setCart([]);
+
+      setPaidAmount("");
+
+      setSelectedDiscountId("");
+
+      setDiscountData(null);
+
+      setDiscountAmount(0);
+
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
+
+      alert("Checkout gagal");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -415,14 +328,9 @@ export default function SalesPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">
-            Cashier
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-800">Cashier</h1>
 
-          <p className="text-sm text-slate-500 mt-1">
-            Transaksi
-            penjualan
-          </p>
+          <p className="text-sm text-slate-500 mt-1">Transaksi penjualan</p>
         </div>
 
         <div className="relative mb-6">
@@ -432,167 +340,110 @@ export default function SalesPage() {
             type="text"
             placeholder="Cari produk..."
             value={search}
-            onChange={(e) =>
-              setSearch(
-                e.target.value,
-              )
-            }
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full h-12 border border-slate-200 rounded-2xl bg-white pl-11 pr-4 outline-none"
           />
         </div>
 
         <div className="space-y-4">
-          {categories.map(
-            (category) => {
-              const filtered =
-                products.filter(
-                  (
-                    product,
-                  ) =>
-                    product
-                      .category
-                      ?.name ===
-                      category &&
-                    product.name
-                      .toLowerCase()
-                      .includes(
-                        search.toLowerCase(),
-                      ),
-                );
+          {categories.map((category) => {
+            const filtered = products.filter(
+              (product) =>
+                product.category?.name === category &&
+                product.name.toLowerCase().includes(search.toLowerCase()),
+            );
 
-              if (
-                filtered.length ===
-                0
-              )
-                return null;
+            if (filtered.length === 0) return null;
 
-              const isOpen =
-                openCategory ===
-                category;
+            const isOpen = openCategory === category;
 
-              return (
-                <div
-                  key={
-                    category
-                  }
-                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden"
+            return (
+              <div
+                key={category}
+                className="bg-white border border-slate-200 rounded-2xl overflow-hidden"
+              >
+                <button
+                  onClick={() => setOpenCategory(isOpen ? null : category)}
+                  className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition"
                 >
-                  <button
-                    onClick={() =>
-                      setOpenCategory(
-                        isOpen
-                          ? null
-                          : category,
-                      )
-                    }
-                    className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition"
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-slate-700" />
+                    </div>
+
+                    <div className="text-left">
+                      <h2 className="text-lg font-semibold text-slate-800">
+                        {category}
+                      </h2>
+
+                      <p className="text-sm text-slate-400">
+                        {filtered.length} produk
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`transition-transform duration-300 ${
+                      isOpen ? "rotate-45" : ""
+                    }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                        <Package className="w-5 h-5 text-slate-700" />
-                      </div>
+                    <Plus className="w-5 h-5 text-slate-600" />
+                  </div>
+                </button>
 
-                      <div className="text-left">
-                        <h2 className="text-lg font-semibold text-slate-800">
-                          {
-                            category
-                          }
-                        </h2>
-
-                        <p className="text-sm text-slate-400">
-                          {
-                            filtered.length
-                          }{" "}
-                          produk
-                        </p>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`transition-transform duration-300 ${
-                        isOpen
-                          ? "rotate-45"
-                          : ""
-                      }`}
-                    >
-                      <Plus className="w-5 h-5 text-slate-600" />
-                    </div>
-                  </button>
-
-                  {isOpen && (
-                    <div className="p-5 pt-0 border-t border-slate-100">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
-                        {filtered.map(
-                          (
-                            product,
-                          ) => (
-                            <div
-                              key={
-                                product.id
-                              }
-                              onClick={() =>
-                                addToCart(
-                                  product,
-                                )
-                              }
-                              className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden cursor-pointer hover:border-slate-300 transition"
-                            >
-                              <div className="relative h-40 bg-slate-100">
-                                {product.imageUrl ? (
-                                  <Image
-                                    src={
-                                      product.imageUrl
-                                    }
-                                    alt={
-                                      product.name
-                                    }
-                                    fill
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <ShoppingCart className="w-10 h-10 text-slate-300" />
-                                  </div>
-                                )}
+                {isOpen && (
+                  <div className="p-5 pt-0 border-t border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
+                      {filtered.map((product) => (
+                        <div
+                          key={product.id}
+                          onClick={() => addToCart(product)}
+                          className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden cursor-pointer hover:border-slate-300 transition"
+                        >
+                          <div className="relative h-40 bg-slate-100">
+                            {product.imageUrl ? (
+                              <Image
+                                src={product.imageUrl}
+                                alt={product.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 33vw"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ShoppingCart className="w-10 h-10 text-slate-300" />
                               </div>
+                            )}
+                          </div>
 
-                              <div className="p-4">
-                                <h3 className="font-semibold text-slate-800">
-                                  {
-                                    product.name
-                                  }
-                                </h3>
+                          <div className="p-4">
+                            <h3 className="font-semibold text-slate-800">
+                              {product.name}
+                            </h3>
 
-                                <div className="flex items-center gap-2 text-xs text-slate-400 mt-2">
-                                  <Store className="w-3 h-3" />
-                                  Stock{" "}
-                                  {
-                                    product.stock
-                                  }
-                                </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 mt-2">
+                              <Store className="w-3 h-3" />
+                              Stock {product.stock}
+                            </div>
 
-                                <div className="flex items-center justify-between mt-5">
-                                  <h4 className="text-lg font-bold text-slate-800">
-                                    {formatRupiah(
-                                      product.sellingPrice,
-                                    )}
-                                  </h4>
+                            <div className="flex items-center justify-between mt-5">
+                              <h4 className="text-lg font-bold text-slate-800">
+                                {formatRupiah(product.sellingPrice)}
+                              </h4>
 
-                                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                                    <Plus className="w-4 h-4" />
-                                  </div>
-                                </div>
+                              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                                <Plus className="w-4 h-4" />
                               </div>
                             </div>
-                          ),
-                        )}
-                      </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-              );
-            },
-          )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -608,191 +459,186 @@ export default function SalesPage() {
                 Keranjang
               </h2>
 
-              <p className="text-sm text-slate-400">
-                {
-                  cart.length
-                }{" "}
-                item
-              </p>
+              <p className="text-sm text-slate-400">{cart.length} item</p>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {cart.length ===
-          0 ? (
+          {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center">
               <ShoppingCart className="w-10 h-10 text-slate-300" />
 
-              <p className="text-sm text-slate-400 mt-3">
-                Keranjang
-                kosong
-              </p>
+              <p className="text-sm text-slate-400 mt-3">Keranjang kosong</p>
             </div>
           ) : (
-            cart.map(
-              (item) => (
-                <div
-                  key={
-                    item.productId
-                  }
-                  className="bg-slate-50 border border-slate-200 rounded-2xl p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-medium text-slate-800">
-                        {
-                          item.name
-                        }
-                      </h3>
+            cart.map((item) => (
+              <div
+                key={item.productId}
+                className="bg-slate-50 border border-slate-200 rounded-2xl p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-slate-800">{item.name}</h3>
 
-                      <p className="text-sm text-slate-400 mt-1">
-                        {formatRupiah(
-                          item.price,
-                        )}
-                      </p>
-                    </div>
+                    <p className="text-sm text-slate-400 mt-1">
+                      {formatRupiah(item.price)}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => removeItem(item.productId)}
+                    className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => decreaseQty(item.productId)}
+                      className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+
+                    <span className="font-semibold w-5 text-center">
+                      {item.quantity}
+                    </span>
 
                     <button
-                      onClick={() =>
-                        removeItem(
-                          item.productId,
-                        )
-                      }
-                      className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center"
+                      onClick={() => increaseQty(item.productId)}
+                      className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-3 h-3" />
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          decreaseQty(
-                            item.productId,
-                          )
-                        }
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-
-                      <span className="font-semibold w-5 text-center">
-                        {
-                          item.quantity
-                        }
-                      </span>
-
-                      <button
-                        onClick={() =>
-                          increaseQty(
-                            item.productId,
-                          )
-                        }
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    <h4 className="font-bold text-slate-800">
-                      {formatRupiah(
-                        item.price *
-                          item.quantity,
-                      )}
-                    </h4>
-                  </div>
+                  <h4 className="font-bold text-slate-800">
+                    {formatRupiah(item.price * item.quantity)}
+                  </h4>
                 </div>
-              ),
-            )
+              </div>
+            ))
           )}
         </div>
 
         <div className="p-4 border-t border-slate-200 space-y-4">
-          <div className="bg-slate-100 rounded-2xl p-4 flex items-center justify-between">
-            <span className="text-sm text-slate-500">
-              Total
-            </span>
+          <div className="space-y-3">
+            <div className="relative">
+              <Percent className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
 
-            <h2 className="text-2xl font-bold text-slate-800">
-              {formatRupiah(
-                total,
-              )}
-            </h2>
-          </div>
+              <select
+                value={selectedDiscountId}
+                onChange={(e) => handleSelectDiscount(e.target.value)}
+                className="w-full h-12 border border-slate-200 rounded-2xl pl-11 pr-4 outline-none bg-white"
+              >
+                <option value="">Pilih Discount</option>
 
-          <div className="grid grid-cols-4 gap-2">
-            {PAYMENT_METHODS.map(
-              (
-                method,
-              ) => (
-                <button
-                  key={
-                    method.key
-                  }
-                  onClick={() =>
-                    setPaymentMethod(
-                      method.key as PaymentMethod,
-                    )
-                  }
-                  className={`rounded-xl py-3 flex flex-col items-center gap-1 text-xs font-medium transition ${
-                    paymentMethod ===
-                    method.key
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  <method.icon className="w-4 h-4" />
+                {discounts.map((discount) => (
+                  <option key={discount.id} value={discount.id}>
+                    {discount.name} -
+                    {discount.type === "PERCENTAGE"
+                      ? ` ${discount.value}%`
+                      : ` ${formatRupiah(discount.value)}`}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                  {
-                    method.label
-                  }
-                </button>
-              ),
+            {discountData && (
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-green-700">
+                      {discountData.name}
+                    </h3>
+
+                    <p className="text-xs text-green-600 mt-1">
+                      {discountData.type === "PERCENTAGE"
+                        ? `${discountData.value}%`
+                        : formatRupiah(discountData.value)}
+                    </p>
+                  </div>
+
+                  <h2 className="text-lg font-bold text-green-700">
+                    -{formatRupiah(discountAmount)}
+                  </h2>
+                </div>
+              </div>
             )}
           </div>
 
-          {paymentMethod ===
-            "CASH" && (
+          <div className="space-y-3">
+            <div className="bg-slate-100 rounded-2xl p-4 flex items-center justify-between">
+              <span className="text-sm text-slate-500">Subtotal</span>
+
+              <h2 className="text-lg font-bold text-slate-800">
+                {formatRupiah(subtotal)}
+              </h2>
+            </div>
+
+            {discountAmount > 0 && (
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-sm text-green-600">Discount</span>
+
+                <h2 className="text-lg font-bold text-green-600">
+                  -{formatRupiah(discountAmount)}
+                </h2>
+              </div>
+            )}
+
+            <div className="bg-slate-900 rounded-2xl p-4 flex items-center justify-between">
+              <span className="text-sm text-slate-300">Total</span>
+
+              <h2 className="text-2xl font-bold text-white">
+                {formatRupiah(total)}
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {PAYMENT_METHODS.map((method) => (
+              <button
+                key={method.key}
+                onClick={() => setPaymentMethod(method.key as PaymentMethod)}
+                className={`rounded-xl py-3 flex flex-col items-center gap-1 text-xs font-medium transition ${
+                  paymentMethod === method.key
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                <method.icon className="w-4 h-4" />
+
+                {method.label}
+              </button>
+            ))}
+          </div>
+
+          {paymentMethod === "CASH" && (
             <>
               <input
                 type="number"
                 placeholder="Jumlah bayar"
-                value={
-                  paidAmount
-                }
-                onChange={(e) =>
-                  setPaidAmount(
-                    e.target.value,
-                  )
-                }
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
                 className="w-full h-12 border border-slate-200 rounded-2xl px-4 outline-none"
               />
 
               <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex items-center justify-between">
-                <span className="text-sm text-green-600">
-                  Kembalian
-                </span>
+                <span className="text-sm text-green-600">Kembalian</span>
 
                 <h3 className="text-xl font-bold text-green-600">
-                  {formatRupiah(
-                    change,
-                  )}
+                  {formatRupiah(change)}
                 </h3>
               </div>
             </>
           )}
 
           <button
-            onClick={
-              handleCheckout
-            }
-            disabled={
-              submitting ||
-              cart.length ===
-                0
-            }
+            onClick={handleCheckout}
+            disabled={submitting || cart.length === 0}
             className="w-full h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold flex items-center justify-center gap-2"
           >
             {submitting ? (
