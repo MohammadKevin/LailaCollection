@@ -3,301 +3,373 @@
 import React, { useEffect, useState } from "react";
 
 import {
+  Activity,
+  Calendar,
+  CreditCard,
+  Loader2,
+  Receipt,
+  Store,
   TrendingDown,
   TrendingUp,
-  Store,
-  Users,
-  ShoppingBag,
-  AlertTriangle,
-  Loader2,
+  User,
+  Wallet,
 } from "lucide-react";
 
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import api from "@/lib/api";
 
-export default function SuperAdminDashboardPage() {
+type Outlet = {
+  id: string;
+  name: string;
+};
+
+type Sale = {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  totalProfit: number;
+  paymentMethod: string;
+  createdAt: string;
+
+  outlet?: {
+    name: string;
+  };
+
+  cashier?: {
+    name: string;
+  };
+};
+
+type ReportData = {
+  totalTransactions: number;
+  totalSales: number;
+  totalProfit: number;
+  sales: Sale[];
+};
+
+type ProfitLoss = {
+  totalSales: number;
+  totalProfit: number;
+  totalExpense: number;
+  netProfit: number;
+};
+
+export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
-  const [dashboard, setDashboard] = useState<any>(null);
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const [error, setError] = useState("");
 
-  const fetchDashboard = async () => {
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  const [report, setReport] = useState<ReportData>({
+    totalTransactions: 0,
+    totalSales: 0,
+    totalProfit: 0,
+    sales: [],
+  });
+
+  const [profitLoss, setProfitLoss] = useState<ProfitLoss>({
+    totalSales: 0,
+    totalProfit: 0,
+    totalExpense: 0,
+    netProfit: 0,
+  });
+
+  const [selectedOutlet, setSelectedOutlet] = useState("");
+
+  const [startDate, setStartDate] = useState("");
+
+  const [endDate, setEndDate] = useState("");
+
+  const fetchReports = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
 
-      const response = await fetch(
-        "https://laila-collections-production.up.railway.app/api/dashboard",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const query = new URLSearchParams();
 
-      const data = await response.json();
-      setDashboard(data);
-    } catch (error) {
+      if (selectedOutlet) {
+        query.append("outletId", selectedOutlet);
+      }
+
+      if (startDate) {
+        query.append("startDate", startDate);
+      }
+
+      if (endDate) {
+        query.append("endDate", endDate);
+      }
+
+      const [salesResponse, outletsResponse, profitResponse] =
+        await Promise.all([
+          api.get(`/reports/sales?${query.toString()}`),
+          api.get("/outlets"),
+          api.get(`/reports/profit-loss?${query.toString()}`),
+        ]);
+
+      setReport(salesResponse.data);
+
+      setSales(salesResponse.data?.sales || []);
+
+      setOutlets(outletsResponse.data || []);
+
+      setProfitLoss(profitResponse.data);
+    } catch (error: any) {
       console.error(error);
+
+      setError(error?.response?.data?.message || "Gagal mengambil laporan");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <Loader2 className="w-10 h-10 animate-spin text-slate-500" />
-      </div>
-    );
-  }
-
-  const salesChart = dashboard?.salesChart || [];
-  const lowStockProducts = dashboard?.lowStockProducts || [];
-
-  const cards = [
-    {
-      title: "Total Penjualan",
-      value: `Rp ${dashboard?.totalRevenue?.toLocaleString("id-ID") || 0}`,
-      icon: TrendingUp,
-    },
-    {
-      title: "Total Profit",
-      value: `Rp ${dashboard?.totalProfit?.toLocaleString("id-ID") || 0}`,
-      icon: TrendingUp,
-    },
-    {
-      title: "Pengeluaran",
-      value: `Rp ${dashboard?.totalExpense?.toLocaleString("id-ID") || 0}`,
-      icon: TrendingDown,
-    },
-    {
-      title: "Total Transaksi",
-      value: `${dashboard?.totalSales || 0} Invoice`,
-      icon: ShoppingBag,
-    },
-  ];
+  useEffect(() => {
+    fetchReports();
+  }, [selectedOutlet, startDate, endDate]);
 
   return (
-    <div className="min-h-screen bg-[#f5f6fa] p-4 md:p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-800">
-          Dashboard
-        </h1>
+    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
+      <div className="space-y-6">
+        {/* HERO */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 md:p-8 text-white shadow-xl">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full blur-3xl" />
 
-        <p className="text-sm text-slate-500 mt-1">
-          Ringkasan performa bisnis hari ini
-        </p>
-      </div>
+          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 text-slate-300">
+                <Activity className="w-5 h-5 text-emerald-400" />
 
-      {/* Statistik */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {cards.map((item, index) => {
-          const Icon = item.icon;
-
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-2xl border border-slate-200 p-5"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">
-                    {item.title}
-                  </p>
-
-                  <h2 className="text-2xl font-semibold text-slate-800 mt-2">
-                    {item.value}
-                  </h2>
-                </div>
-
-                <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-slate-600" />
-                </div>
+                <span className="text-sm font-medium">
+                  Super Admin Dashboard
+                </span>
               </div>
+
+              <h1 className="text-3xl md:text-4xl font-bold mt-4">
+                Monitoring Bisnis
+              </h1>
+
+              <p className="text-slate-300 mt-3 max-w-2xl">
+                Pantau seluruh transaksi, profit, outlet, dan performa
+                penjualan secara real-time.
+              </p>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Chart + Info */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-6">
-        {/* Chart */}
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Grafik Penjualan
-            </h2>
+            <div className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl px-5 py-4 min-w-[240px]">
+              <p className="text-sm text-slate-300">Net Profit</p>
 
-            <p className="text-sm text-slate-500">
-              Statistik penjualan terbaru
+              <h2 className="text-3xl font-bold text-emerald-400 mt-2">
+                Rp {profitLoss.netProfit.toLocaleString("id-ID")}
+              </h2>
+
+              <p className="text-xs text-slate-400 mt-2">
+                Profit bersih keseluruhan
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FILTER */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-sm">
+          <select
+            value={selectedOutlet}
+            onChange={(e) => setSelectedOutlet(e.target.value)}
+            className="h-12 border border-slate-300 rounded-2xl px-4 outline-none focus:ring-2 focus:ring-slate-300"
+          >
+            <option value="">Semua Outlet</option>
+
+            {outlets.map((outlet) => (
+              <option key={outlet.id} value={outlet.id}>
+                {outlet.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-12 border border-slate-300 rounded-2xl px-4 outline-none focus:ring-2 focus:ring-slate-300"
+          />
+
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="h-12 border border-slate-300 rounded-2xl px-4 outline-none focus:ring-2 focus:ring-slate-300"
+          />
+        </div>
+
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <Card
+            title="Total Penjualan"
+            value={`Rp ${report.totalSales.toLocaleString("id-ID")}`}
+            icon={<Wallet className="w-5 h-5" />}
+            color="bg-emerald-100 text-emerald-700"
+          />
+
+          <Card
+            title="Total Profit"
+            value={`Rp ${report.totalProfit.toLocaleString("id-ID")}`}
+            icon={<TrendingUp className="w-5 h-5" />}
+            color="bg-blue-100 text-blue-700"
+          />
+
+          <Card
+            title="Total Operasional"
+            value={`Rp ${profitLoss.totalExpense.toLocaleString("id-ID")}`}
+            icon={<TrendingDown className="w-5 h-5" />}
+            color="bg-red-100 text-red-700"
+          />
+
+          <Card
+            title="Total Transaksi"
+            value={`${report.totalTransactions}`}
+            icon={<Receipt className="w-5 h-5" />}
+            color="bg-orange-100 text-orange-700"
+          />
+        </div>
+
+        {/* ERROR */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl p-4">
+            {error}
+          </div>
+        )}
+
+        {/* CONTENT */}
+        {loading ? (
+          <div className="bg-white border border-slate-200 rounded-3xl h-[350px] flex items-center justify-center shadow-sm">
+            <Loader2 className="w-10 h-10 animate-spin text-slate-700" />
+          </div>
+        ) : sales.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-3xl h-[350px] flex flex-col items-center justify-center shadow-sm">
+            <Receipt className="w-16 h-16 text-slate-300" />
+
+            <p className="text-slate-500 mt-4 text-lg">
+              Tidak ada data transaksi
             </p>
           </div>
-
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesChart}>
-                <defs>
-                  <linearGradient
-                    id="sales"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor="#3b82f6"
-                      stopOpacity={0.2}
-                    />
-
-                    <stop
-                      offset="95%"
-                      stopColor="#3b82f6"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                />
-
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                />
-
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                />
-
-                <Tooltip />
-
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#sales)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
-                <Store className="w-5 h-5 text-slate-700" />
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-500">
-                  Total Outlet
-                </p>
-
-                <h3 className="text-xl font-semibold text-slate-800">
-                  {dashboard?.totalOutlets || 0}
-                </h3>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
-                <Users className="w-5 h-5 text-slate-700" />
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-500">
-                  Total Admin
-                </p>
-
-                <h3 className="text-xl font-semibold text-slate-800">
-                  {dashboard?.totalAdmins || 0}
-                </h3>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-              </div>
-
-              <div>
-                <p className="text-sm text-slate-500">
-                  Stok Menipis
-                </p>
-
-                <h3 className="text-xl font-semibold text-slate-800">
-                  {lowStockProducts.length}
-                </h3>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Low Stock */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 mt-6">
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold text-slate-800">
-            Produk Stok Menipis
-          </h2>
-
-          <p className="text-sm text-slate-500">
-            Daftar produk yang perlu restock
-          </p>
-        </div>
-
-        {lowStockProducts.length === 0 ? (
-          <div className="py-10 text-center text-slate-500 text-sm">
-            Semua stok masih aman
-          </div>
         ) : (
-          <div className="space-y-3">
-            {lowStockProducts.map((product: any, index: number) => (
+          <div className="space-y-4">
+            {sales.map((sale) => (
               <div
-                key={index}
-                className="flex items-center justify-between border border-slate-200 rounded-xl px-4 py-3"
+                key={sale.id}
+                className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm hover:shadow-md transition"
               >
-                <div>
-                  <h3 className="font-medium text-slate-800">
-                    {product.name}
-                  </h3>
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <Receipt className="w-6 h-6 text-slate-700" />
+                    </div>
 
-                  <p className="text-sm text-red-500">
-                    Butuh restock
-                  </p>
-                </div>
+                    <div>
+                      <h2 className="font-bold text-lg text-slate-800">
+                        {sale.invoiceNumber}
+                      </h2>
 
-                <div className="text-sm font-semibold text-slate-700">
-                  Sisa {product.stock}
+                      <div className="flex flex-wrap gap-4 mt-4 text-sm text-slate-500">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+
+                          {new Date(sale.createdAt).toLocaleDateString(
+                            "id-ID",
+                            {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            }
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Store className="w-4 h-4" />
+
+                          {sale.outlet?.name || "-"}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+
+                          {sale.cashier?.name || "-"}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+
+                          {sale.paymentMethod}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <PriceBox
+                      title="Penjualan"
+                      value={`Rp ${sale.totalAmount.toLocaleString("id-ID")}`}
+                    />
+
+                    <PriceBox
+                      title="Profit"
+                      value={`Rp ${sale.totalProfit.toLocaleString("id-ID")}`}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Card({
+  title,
+  value,
+  icon,
+  color,
+}: {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-3xl p-5 flex items-center justify-between shadow-sm hover:shadow-md transition">
+      <div>
+        <p className="text-sm text-slate-400">{title}</p>
+
+        <h2 className="text-2xl font-bold text-slate-800 mt-2">
+          {value}
+        </h2>
+      </div>
+
+      <div
+        className={`w-14 h-14 rounded-2xl flex items-center justify-center ${color}`}
+      >
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+function PriceBox({
+  title,
+  value,
+}: {
+  title: string;
+  value: string;
+}) {
+  return (
+    <div className="bg-slate-100 rounded-2xl p-4 min-w-[160px]">
+      <p className="text-xs text-slate-500 uppercase tracking-wide">
+        {title}
+      </p>
+
+      <h2 className="text-lg font-bold text-slate-800 mt-2">
+        {value}
+      </h2>
     </div>
   );
 }

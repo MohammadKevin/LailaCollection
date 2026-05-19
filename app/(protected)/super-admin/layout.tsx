@@ -40,6 +40,12 @@ const menus = [
   },
 
   {
+    label: "Discount",
+    icon: Users,
+    href: "/super-admin/discount",
+  },
+
+  {
     label: "Products",
     icon: ShoppingBag,
     href: "/super-admin/products",
