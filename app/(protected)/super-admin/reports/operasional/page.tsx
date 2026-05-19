@@ -72,7 +72,6 @@ export default function OperationalReportPage() {
 
       const [expensesResponse, outletsResponse] = await Promise.all([
         api.get("/expenses"),
-
         api.get("/outlets"),
       ]);
 
